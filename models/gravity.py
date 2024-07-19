@@ -58,10 +58,10 @@ def grav_Model(tessellation_file_train_location, tessellation_file_test_location
     # Rename the synthetic column and save to .csv file
     if out_format == 'flows':
         synth_fdf_fitted.rename(columns={'flow': 'synthetic_flows'}, inplace=True)
-        synth_fdf_fitted.to_csv('../outputs/synthetic_flows.csv', index=False)
+        synth_fdf_fitted.to_csv('../outputs/gravity_synthetic_flows.csv', index=False)
     elif out_format == 'probabilities':
         synth_fdf_fitted.rename(columns={'flow': 'synthetic_probabilities'}, inplace=True)
-        synth_fdf_fitted.to_csv('../outputs/synthetic_probabilities.csv', index=False)
+        synth_fdf_fitted.to_csv('../outputs/gravity_synthetic_probabilities.csv', index=False)
     else:
         print("Invalid outputs format.")
 
