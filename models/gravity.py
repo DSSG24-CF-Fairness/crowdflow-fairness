@@ -11,19 +11,18 @@ pd.set_option('display.max_columns', None)
 
 # Settings
 parser = argparse.ArgumentParser(description="Run gravity model.")
-parser.add_argument('tessellation_file_train_location', type=str,
+parser.add_argument('--tessellation_file_train_location', type=str,
                     help="Path to the training tessellation .geojson file.")
-parser.add_argument('tessellation_file_test_location', type=str,
+parser.add_argument('--tessellation_file_test_location', type=str,
                     help="Path to the test tessellation .geojson file.")
-parser.add_argument('flow_data_file_train_location', type=str,
+parser.add_argument('--flow_data_file_train_location', type=str,
                     help="Path to the training flow data .csv file.")
-parser.add_argument('flow_data_file_test_location', type=str,
+parser.add_argument('--flow_data_file_test_location', type=str,
                     help="Path to the test flow data .csv file.")
-parser.add_argument('gravity_type', type=str, default='singly_constrained', choices=['singly_constrained', 'globally_constrained'],
+parser.add_argument('--gravity_type', type=str, default='singly_constrained', choices=['singly_constrained', 'globally_constrained'],
                     help="Type of gravity model, 'singly_constrained' or 'globally'. Default is 'singly_constrained'.")
-parser.add_argument('out_format', type=str, default='flows', choices=['flows', 'probabilities'],
+parser.add_argument('--out_format', type=str, default='flows', choices=['flows', 'probabilities'],
                     help="Type of output, 'flows' or 'probabilities'. Default is 'flows'.")
-
 
 def grav_Model(tessellation_file_train_location, tessellation_file_test_location,
                flow_data_file_train_location, flow_data_file_test_location,
@@ -102,8 +101,15 @@ if __name__ == "__main__":
     main()
 
 
+"""
+Test run command line (change to your local path):
+python models/gravity.py \
+--tessellation_file_train_location /Users/apple/Documents/GitHub/DSSG/crowdflow-fairness/data/tessellation_use_this.geojson \
+--tessellation_file_test_location /Users/apple/Documents/GitHub/DSSG/crowdflow-fairness/data/tessellation_use_this.geojson \
+--flow_data_file_train_location /Users/apple/Documents/GitHub/DSSG/crowdflow-fairness/data/flows.csv \
+--flow_data_file_test_location /Users/apple/Documents/GitHub/DSSG/crowdflow-fairness/data/flows.csv \
+--gravity_type singly_constrained \
+--out_format flows
+"""
 
-"""
-Test run command line:
-python models/gravity.py /Users/apple/Documents/GitHub/DSSG/crowdflow-fairness/data/tessellation_use_this.geojson /Users/apple/Documents/GitHub/DSSG/crowdflow-fairness/data/tessellation_use_this.geojson /Users/apple/Documents/GitHub/DSSG/crowdflow-fairness/data/flows.csv /Users/apple/Documents/GitHub/DSSG/crowdflow-fairness/data/flows.csv singly_constrained flows
-"""
+
