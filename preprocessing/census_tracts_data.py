@@ -1,31 +1,54 @@
 import censusdata
 import pandas as pd
+import geopandas as gpd
 
 
 def get_census_data(tables, state, county='*', year=2022):
     """
     Download census data for a given state and optional county.
+    Default year: 2022, use 2022 ACS 5-year estimates
     """
-    # Download the data
-    data = censusdata.download('acs5', year,  # Use 2022 ACS 5-year estimates
+    # Download the census data
+    data = censusdata.download('acs5', year,
                                censusdata.censusgeo([('state', state), ('county', county), ('tract', '*')]),
                                list(tables.keys()))
 
-    # Rename the columns
     data.rename(columns=tables, inplace=True)
 
-    # Extract GEOID information
+    # Extract required GEOID information
     data['GEOID'] = data.index.to_series().apply(lambda x: x.geo[0][1] + x.geo[1][1] + x.geo[2][1])
     data.reset_index(drop=True, inplace=True)
     data = data[['GEOID'] + list(tables.values())]
     return data
 
 
-def get_tract_data(state_fips, county_fips=None, save_to_csv=False, filename='census_data.csv'):
+def get_census_tract_geom(state_fips, county_fips=None):
+    """
+    Download the census tract geometries for a given state and optional county.
+    """
+    # Download the census tract shapefiles
+    tracts = gpd.read_file(f'https://www2.census.gov/geo/tiger/TIGER2022/TRACT/tl_2022_{state_fips}_tract.zip')
+
+    # Filter to the specific county if provided
+    if county_fips and county_fips != '*':
+        tracts = tracts[tracts['COUNTYFP'] == county_fips]
+
+    # Convert to EPSG:4326
+    tracts = tracts.to_crs('EPSG:4326')
+
+    # Create GEOID and set as index
+    tracts['GEOID'] = tracts['STATEFP'] + tracts['COUNTYFP'] + tracts['TRACTCE']
+    tracts = tracts[['GEOID', 'geometry']]
+    tracts.set_index('GEOID', inplace=True)
+
+    return tracts
+
+
+def get_census_tract_data(state_fips, county_fips=None, save_to_csv=False, filename='census_data.csv'):
     """
     Fetch census data (total population and other features) for a given state and optional county, and save to CSV if specified.
     """
-    # Define the tables of features
+    # Define the tables of features to fetch
     tables = {
         'B19013_001E': 'MedianIncome',
         'B19013_001M': 'MedianIncome_MoE',
@@ -58,15 +81,19 @@ def get_tract_data(state_fips, county_fips=None, save_to_csv=False, filename='ce
     county_fips = county_fips if county_fips is not None else '*'
 
     data = get_census_data(tables, state_fips, county_fips)
+    tract_geom_gdf = get_census_tract_geom(state_fips, county_fips)
+    merged_data = data.merge(tract_geom_gdf, on='GEOID')
+    merged_gdf = gpd.GeoDataFrame(merged_data, geometry='geometry')
+    # Save to CSV if specified
     if save_to_csv:
-        data.to_csv(filename, index=False)
+        merged_gdf.to_csv(filename, index=False)
 
-    return data
+    return merged_gdf
 
 
 # Example usage:
 # Fetch the data for Washington state (state FIPS code is '53') and save it to a CSV file
-washington_data = get_tract_data('53', save_to_csv=True, filename='../data/washington_census_data.csv')
+# washington_data = get_census_tract_data('53', save_to_csv=True, filename='../data/washington_census_data.csv')
 
 # Fetch the data for King County, Washington state (state FIPS code is '53', county FIPS code is '033')
-# king_county_data = get_tract_data('53', '033', save_to_csv=True, filename='../data/king_county_census_data.csv')
+# king_county_data = get_census_tract_data('53', '033', save_to_csv=True, filename='../data/king_county_census_data.csv')
