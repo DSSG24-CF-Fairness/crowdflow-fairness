@@ -1,0 +1,17 @@
+Here is the link where you can find data:
+
+  https://drive.google.com/drive/folders/1NnIrpfDZo15PFVA7Cf6FWvyakjJyluC4
+
+1. aggregated_data.csv
+  Description: Aggregared Safegraph Census Track level data. This data was used by Deep Gravity paper.
+  Time Period: Aggregate of weekly flows for 10th June 2019-16th June 2019  
+  Geography: US including Washington and New York
+  
+2. feature_space_New_York.csv
+  Description: This has 17 features created for New York by authors of Deep Gravity paper. 
+  Time Period: NA
+  Geography: New York
+
+
+
+
