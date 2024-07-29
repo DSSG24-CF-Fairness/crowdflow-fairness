@@ -68,9 +68,8 @@ data = {
 df = pd.DataFrame(data)
 
 # Apply the function to each origin separately
-df = df.groupby('Origin').apply(calculate_biased_flow).reset_index(drop=True)
+df = df.groupby('Origin', group_keys=False).apply(calculate_biased_flow).reset_index(drop=True)
 
 # Display the updated DataFrame
-import ace_tools as tools; tools.display_dataframe_to_user(name="Updated Data with Rounded B_Flow", dataframe=df)
 
-df
+print(df)
