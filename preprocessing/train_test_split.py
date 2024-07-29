@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 import geopandas as gpd
 from shapely.geometry import box, Point
 from sklearn.model_selection import StratifiedShuffleSplit
@@ -89,7 +90,6 @@ def train_test_split(flow_df, population_df, washington_crs, grid):
     matched_gdf = gpd.sjoin(census_tracts_gdf, grid[['geometry', 'region_index']], how='left', op='within')
     matched_gdf = matched_gdf.drop(columns='geometry').fillna(-1).astype({'region_index': 'Int64'})
     matched_gdf = matched_gdf[['geoid', 'region_index']]
-
     merged_df = pd.merge(matched_gdf, population_df, on='geoid', how='left').fillna(0).astype({'total_population': 'int'})
     grouped_df = merged_df.groupby('region_index').agg(
         region_index=('region_index', 'first'),
@@ -102,31 +102,32 @@ def train_test_split(flow_df, population_df, washington_crs, grid):
     sorted_df = grouped_df.sort_values(by='grid_population', ascending=False)
     splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.5, random_state=42)
     sorted_df['stratify'] = sorted_df.index % 2
-
     for train_idx, test_idx in splitter.split(sorted_df, sorted_df['stratify']):
         train_set = sorted_df.iloc[train_idx]
         test_set = sorted_df.iloc[test_idx]
 
+    # Save region indices with corresponding census tracts geoids to CSV files
     train_set.reset_index(inplace=True)
     test_set.reset_index(inplace=True)
-
     train_set[['region_index']].to_csv('../data/train_region_index.csv', index=False)
     train_set[['region_index']].to_csv('../data/test_region_index.csv', index=False)
 
     return train_set[['region_index', 'census_tracts_geoids']], test_set[['region_index', 'census_tracts_geoids']]
 
 
-def filter_flow_data(flow_df, train_set, test_set):
+def filter_flow_data(flow_df, population_df, train_set, test_set):
     """
-    Filter flow data based on geoids present in the training and test sets and save the filtered data to CSV files.
+    Filters flow data to include only geoids present in the specified training and test sets.
+    Saves the filtered flow data to CSV files and returns DataFrames containing the filtered data along with the count of unique geoids.
 
     Parameters:
-    flow_df (pd.DataFrame): DataFrame containing flow data with origin and destination geoids and population flows.
-    train_set (pd.DataFrame): DataFrame containing the training set with grid indices and census tract geoids.
-    test_set (pd.DataFrame): DataFrame containing the test set with grid indices and census tract geoids.
+    flow_df (pd.DataFrame): DataFrame with flow data, including origin and destination geoids and population flows.
+    population_df (pd.DataFrame): DataFrame containing population information for each geoid.
+    train_set (pd.DataFrame): DataFrame with training set information, including grid indices and census tract geoids.
+    test_set (pd.DataFrame): DataFrame with test set information, including grid indices and census tract geoids.
 
     Returns:
-    pd.DataFrame: Two DataFrames containing the filtered training and test flow data.
+    pd.DataFrame: Two DataFrames containing the filtered and adjusted training and test flow data.
     .csv: Two .csv files are saved for filtered training and test flow data.
     """
 
@@ -135,11 +136,9 @@ def filter_flow_data(flow_df, train_set, test_set):
 
     for geoids in train_set['census_tracts_geoids']:
         train_geoids.update(geoids.split(','))
-
     for geoids in test_set['census_tracts_geoids']:
         test_geoids.update(geoids.split(','))
 
-    # Ensure geoids are strings
     train_geoids = {str(geoid) for geoid in train_geoids}
     test_geoids = {str(geoid) for geoid in test_geoids}
 
@@ -149,11 +148,26 @@ def filter_flow_data(flow_df, train_set, test_set):
     test_flows = flow_df[
         flow_df['geoid_o'].astype(str).isin(test_geoids) & flow_df['geoid_d'].astype(str).isin(test_geoids)]
 
-    # Save the filtered flow data to CSV files
-    train_flows[['geoid_o', 'geoid_d', 'pop_flows']].to_csv('../data/train_flows.csv', index=False)
-    test_flows[['geoid_o', 'geoid_d', 'pop_flows']].to_csv('../data/test_flows.csv', index=False)
+    # Merge the population information into train and test sets
+    train_with_pop = train_flows.merge(population_df, left_on='geoid_o', right_on='geoid', how='left')
+    train_pop_merged = train_with_pop.groupby('geoid_o')['total_population'].mean()
+    test_with_pop = test_flows.merge(population_df, left_on='geoid_o', right_on='geoid', how='left')
+    test_pop_merged = test_with_pop.groupby('geoid_o')['total_population'].mean()
 
-    return train_flows[['geoid_o', 'geoid_d', 'pop_flows']], test_flows[['geoid_o', 'geoid_d', 'pop_flows']]
+    # Determine the total number of geoid_o in train/test set
+    num_geoid_count = min(len(train_pop_merged), len(test_pop_merged))
+
+    # Adjust geoid number in train/test set sorting by lowest population
+    train_geoid_sorted = train_pop_merged.sort_values().head(num_geoid_count).index
+    test_geoid_sorted = test_pop_merged.sort_values().head(num_geoid_count).index
+    train_set_adjusted = train_flows[train_flows['geoid_o'].isin(train_geoid_sorted)]
+    test_set_adjusted = test_flows[test_flows['geoid_o'].isin(test_geoid_sorted)]
+
+    # Save the filtered flow data to CSV files
+    train_set_adjusted[['geoid_o', 'geoid_d', 'pop_flows']].to_csv('../data/train_flows.csv', index=False)
+    test_set_adjusted[['geoid_o', 'geoid_d', 'pop_flows']].to_csv('../data/test_flows.csv', index=False)
+
+    return train_set_adjusted[['geoid_o', 'geoid_d', 'pop_flows']], test_set_adjusted[['geoid_o', 'geoid_d', 'pop_flows']], num_geoid_count
 
 
 def main():
@@ -162,8 +176,18 @@ def main():
     population_df = pd.read_csv('../data/washington_census_tracts_population.csv')
 
     grid = create_grid(washington.unary_union, 25, washington.crs)
+
+    # Plot the grid
+    fig, ax = plt.subplots(figsize=(10, 10))
+    grid.plot(ax=ax, edgecolor='black', facecolor='none', linewidth=1)  # Plot Seattle boundary
+    grid.boundary.plot(ax=ax, edgecolor='red', linewidth=0.5)  # Plot grid cell boundaries
+    plt.show()
+
+    # Split the data into train and test sets
     train_output, test_output = train_test_split(flow_df, population_df, washington.crs, grid)
-    train_flows, test_flows = filter_flow_data(flow_df, train_output, test_output)
+    train_set_flows, test_set_flows, num_geoid_count = filter_flow_data(flow_df, population_df, train_output, test_output)
+
+    print(train_set_flows, test_set_flows, num_geoid_count)
 
 
 
