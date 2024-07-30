@@ -21,7 +21,7 @@ class BiasedFlowCalculator:
         pd.DataFrame: The DataFrame with additional columns:
                       - 'Demographic Delta': Absolute difference between the origin's demographic and the destination's demographic.
                       - 'Demographic Rank': Rank of the demographic delta for each destination within the origin.
-                      - 'Cumulative Population': Cumulative population of destinations with lower demographic.
+                      - 'Cumulative Population': Cumulative population of destinations with lower/higher demographic based on rank order.
                       - 'Percentile': Percentile based on the cumulative population.
                       - 'Biased Flow': Biased flow value calculated based on the given formula.
                       - 'B_Flow': Rounded biased flow value, adjusted to ensure the total outflow remains the same.
@@ -34,9 +34,13 @@ class BiasedFlowCalculator:
         ascending = self.rank_order == 'asc'
         df_flow['Demographic Rank'] = df_flow['Demographic Delta'].rank(ascending=ascending, method='min')
 
-        # Step 2: Create Cumulative Population
-        df_flow = df_flow.sort_values('Demographic Delta', ascending=True)
-        df_flow['Cumulative Population'] = df_flow['Population'].cumsum() - df_flow['Population']
+        # Step 2: Sort values and create Cumulative Population
+        if ascending:
+            df_flow = df_flow.sort_values('Demographic Rank', ascending=True)
+            df_flow['Cumulative Population'] = df_flow['Population'].cumsum() - df_flow['Population']
+        else:
+            df_flow = df_flow.sort_values('Demographic Rank', ascending=False)
+            df_flow['Cumulative Population'] = df_flow['Population'][::-1].cumsum()[::-1] - df_flow['Population']
 
         # Step 3: Create Percentile
         total_population = df_flow['Population'].sum()
@@ -86,7 +90,7 @@ class BiasedFlowCalculator:
         return df_flow
 
 
-# below is a tutorial to run this class
+# Provided test data
 data = {
     'Destination': ['53033000101', '53033000102', '53033000103'],
     'Origin': ['53033000100', '53033000100', '53033000100'],
@@ -106,7 +110,6 @@ df_asc = calculator_asc.calculate_biased_flow()
 calculator_desc = BiasedFlowCalculator(df, rank_order='desc')
 df_desc = calculator_desc.calculate_biased_flow()
 
-# Display the updated DataFrames
 
-df_asc, df_desc
-
+print(df_asc)
+print(df_desc)
