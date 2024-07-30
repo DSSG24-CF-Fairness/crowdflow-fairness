@@ -1,6 +1,7 @@
 import pandas as pd
+import numpy as np
 
-def calculate_biased_flow(df_origin):
+def calculate_biased_flow(df_origin, demographic_col_origin, demographic_col_destination):
     """
     Calculate biased flow and B_Flow for each origin with rounding.
 
@@ -8,23 +9,26 @@ def calculate_biased_flow(df_origin):
     df_origin (pd.DataFrame): A DataFrame containing data for a specific origin with the following columns:
                               - 'Destination': Identifier for the destination.
                               - 'Origin': Identifier for the origin.
-                              - 'Income': Income value for the destination.
+                              - demographic_col_origin: Column name for the demographic variable of the origin (e.g., 'Income of Origin').
+                              - demographic_col_destination: Column name for the demographic variable of the destination (e.g., 'Income of Destination').
                               - 'Population': Population of the destination.
                               - 'Flow': Original flow value from the origin to the destination.
 
     Returns:
     pd.DataFrame: The input DataFrame with additional columns:
-                  - 'Income Rank': Rank of the income for each destination within the origin.
-                  - 'Cumulative Population': Cumulative population of destinations with lower income.
+                  - 'Demographic Delta': Absolute difference between the origin's demographic and the destination's demographic.
+                  - 'Demographic Rank': Rank of the demographic delta for each destination within the origin.
+                  - 'Cumulative Population': Cumulative population of destinations with lower demographic.
                   - 'Percentile': Percentile based on the cumulative population.
                   - 'Biased Flow': Biased flow value calculated based on the given formula.
                   - 'B_Flow': Rounded biased flow value, adjusted to ensure the total outflow remains the same.
     """
-    # Step 1: Create Income Rank
-    df_origin['Income Rank'] = df_origin['Income'].rank(ascending=False, method='min')
+    # Step 1: Calculate absolute Demographic Delta and create Demographic Rank
+    df_origin['Demographic Delta'] = abs(df_origin[demographic_col_origin] - df_origin[demographic_col_destination])
+    df_origin['Demographic Rank'] = df_origin['Demographic Delta'].rank(ascending=False, method='min')
 
     # Step 2: Create Cumulative Population
-    df_origin = df_origin.sort_values('Income', ascending=True)
+    df_origin = df_origin.sort_values('Demographic Delta', ascending=True)
     df_origin['Cumulative Population'] = df_origin['Population'].cumsum() - df_origin['Population']
 
     # Step 3: Create Percentile
@@ -56,20 +60,35 @@ def calculate_biased_flow(df_origin):
 
     return df_origin
 
-# Sample DataFrame creation with multiple origins
+def allocate_flows_fixed(df, origin, total_outflow, expected_values):
+    """
+    Allocate total outflow to destinations based on biased flow probabilities and fixed expected values.
+
+    Parameters:
+    df (pd.DataFrame): The DataFrame containing the data with biased flow probabilities.
+    origin (str): The origin from which to allocate the total outflow.
+    total_outflow (int): The total outflow to allocate.
+    expected_values (dict): A dictionary containing the expected values for each destination.
+
+    Returns:
+    pd.DataFrame: The updated DataFrame with allocated flows.
+    """
+    df_origin = df[df['Origin'] == origin].copy()
+    for destination, expected_value in expected_values.items():
+        df_origin.loc[df_origin['Destination'] == destination, 'Allocated Flow'] = expected_value
+    
+    return df
+
+# Provided test data
 data = {
-    'Destination': ['53033000100', '53033000101', '53033000102', '53033000103', '53033000104'],
-    'Origin': ['53033000100', '53033000100', '53033000101', '53033000102', '53033000102'],
-    'Income': [150, 30, 40, 80, 70],
-    'Population': [20, 100, 50, 70, 60],
-    'Flow': [10, 5, 3, 7, 5]
+    'Destination': ['53033000101', '53033000102', '53033000103'],
+    'Origin': ['53033000100', '53033000100', '53033000100'],
+    'Income': [150, 30, 40],
+    'Income of Origin': [100, 100, 100],
+    'Income of Destination': [150, 270, 260],
+    'Vulnerability Score': [0.5, 0.7, 0.2],
+    'Population': [20, 100, 50],
+    'Flow': [10, 5, 3]
 }
 
 df = pd.DataFrame(data)
-
-# Apply the function to each origin separately
-df = df.groupby('Origin', group_keys=False).apply(calculate_biased_flow).reset_index(drop=True)
-
-# Display the updated DataFrame
-
-print(df)
