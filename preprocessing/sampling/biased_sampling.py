@@ -1,94 +1,112 @@
 import pandas as pd
 import numpy as np
 
-def calculate_biased_flow(df_origin, demographic_col_origin, demographic_col_destination):
-    """
-    Calculate biased flow and B_Flow for each origin with rounding.
+class BiasedFlowCalculator:
+    def __init__(self, df_flow, rank_order='asc'):
+        """
+        Initialize the BiasedFlowCalculator with a DataFrame and rank order.
 
-    Parameters:
-    df_origin (pd.DataFrame): A DataFrame containing data for a specific origin with the following columns:
-                              - 'Destination': Identifier for the destination.
-                              - 'Origin': Identifier for the origin.
-                              - demographic_col_origin: Column name for the demographic variable of the origin (e.g., 'Income of Origin').
-                              - demographic_col_destination: Column name for the demographic variable of the destination (e.g., 'Income of Destination').
-                              - 'Population': Population of the destination.
-                              - 'Flow': Original flow value from the origin to the destination.
+        Parameters:
+        df_flow (pd.DataFrame): DataFrame containing the flow data.
+        rank_order (str): Order to rank the demographic delta ('asc' for ascending, 'desc' for descending).
+        """
+        self.df_flow = df_flow
+        self.rank_order = rank_order
 
-    Returns:
-    pd.DataFrame: The input DataFrame with additional columns:
-                  - 'Demographic Delta': Absolute difference between the origin's demographic and the destination's demographic.
-                  - 'Demographic Rank': Rank of the demographic delta for each destination within the origin.
-                  - 'Cumulative Population': Cumulative population of destinations with lower demographic.
-                  - 'Percentile': Percentile based on the cumulative population.
-                  - 'Biased Flow': Biased flow value calculated based on the given formula.
-                  - 'B_Flow': Rounded biased flow value, adjusted to ensure the total outflow remains the same.
-    """
-    # Step 1: Calculate absolute Demographic Delta and create Demographic Rank
-    df_origin['Demographic Delta'] = abs(df_origin[demographic_col_origin] - df_origin[demographic_col_destination])
-    df_origin['Demographic Rank'] = df_origin['Demographic Delta'].rank(ascending=False, method='min')
+    def calculate_biased_flow(self):
+        """
+        Calculate biased flow and B_Flow for each origin with rounding.
 
-    # Step 2: Create Cumulative Population
-    df_origin = df_origin.sort_values('Demographic Delta', ascending=True)
-    df_origin['Cumulative Population'] = df_origin['Population'].cumsum() - df_origin['Population']
+        Returns:
+        pd.DataFrame: The DataFrame with additional columns:
+                      - 'Demographic Delta': Absolute difference between the origin's demographic and the destination's demographic.
+                      - 'Demographic Rank': Rank of the demographic delta for each destination within the origin.
+                      - 'Cumulative Population': Cumulative population of destinations with lower demographic.
+                      - 'Percentile': Percentile based on the cumulative population.
+                      - 'Biased Flow': Biased flow value calculated based on the given formula.
+                      - 'B_Flow': Rounded biased flow value, adjusted to ensure the total outflow remains the same.
+        """
+        df_flow = self.df_flow.copy()
+        # Step 1: Calculate absolute Demographic Delta and create Demographic Rank
+        df_flow['Demographic Delta'] = abs(df_flow['demographic_col_origin'] - df_flow['demographic_col_destination'])
 
-    # Step 3: Create Percentile
-    total_population = df_origin['Population'].sum()
-    df_origin['Percentile'] = (df_origin['Cumulative Population'] + 0.5 * df_origin['Population']) / total_population * 100
-    df_origin['Percentile'] = df_origin['Percentile'].apply(lambda x: f'{x:.2f}%')
+        # Determine ranking order
+        ascending = self.rank_order == 'asc'
+        df_flow['Demographic Rank'] = df_flow['Demographic Delta'].rank(ascending=ascending, method='min')
 
-    # Step 4: Calculate Biased Flow
-    df_origin['Percentile Value'] = df_origin['Percentile'].str.rstrip('%').astype(float) / 100
-    df_origin['Numerator'] = (df_origin['Percentile Value'] + 0.5) * df_origin['Flow']
-    denominator = df_origin['Numerator'].sum()
-    df_origin['Biased Flow'] = df_origin['Numerator'] / denominator
+        # Step 2: Create Cumulative Population
+        df_flow = df_flow.sort_values('Demographic Delta', ascending=True)
+        df_flow['Cumulative Population'] = df_flow['Population'].cumsum() - df_flow['Population']
 
-    # Step 5: Calculate B_Flow
-    total_outflow = df_origin['Flow'].sum()
-    df_origin['B_Flow'] = df_origin['Biased Flow'] * total_outflow
+        # Step 3: Create Percentile
+        total_population = df_flow['Population'].sum()
+        df_flow['Percentile'] = (df_flow['Cumulative Population'] + 0.5 * df_flow['Population']) / total_population * 100
+        df_flow['Percentile'] = df_flow['Percentile'].apply(lambda x: f'{x:.2f}%')
 
-    # Step 6: Round B_Flow to integers
-    df_origin['B_Flow'] = df_origin['B_Flow'].round()
+        # Step 4: Calculate Biased Flow
+        df_flow['Percentile Value'] = df_flow['Percentile'].str.rstrip('%').astype(float) / 100
+        df_flow['Numerator'] = (df_flow['Percentile Value'] + 0.5) * df_flow['Flow']
+        denominator = df_flow['Numerator'].sum()
+        df_flow['Biased Flow'] = df_flow['Numerator'] / denominator
 
-    # Adjust B_Flow to ensure total outflow remains the same
-    diff = total_outflow - df_origin['B_Flow'].sum()
-    if diff != 0:
-        adjustment = df_origin['B_Flow'].idxmax() if diff > 0 else df_origin['B_Flow'].idxmin()
-        df_origin.at[adjustment, 'B_Flow'] += diff
+        # Step 5: Calculate B_Flow
+        total_outflow = df_flow['Flow'].sum()
+        df_flow['B_Flow'] = df_flow['Biased Flow'] * total_outflow
 
-    # Drop intermediate columns
-    df_origin.drop(columns=['Percentile Value', 'Numerator'], inplace=True)
+        # Step 6: Round B_Flow to integers
+        df_flow['B_Flow'] = df_flow['B_Flow'].round()
 
-    return df_origin
+        # Adjust B_Flow to ensure total outflow remains the same
+        diff = total_outflow - df_flow['B_Flow'].sum()
+        if diff != 0:
+            adjustment = df_flow['B_Flow'].idxmax() if diff > 0 else df_flow['B_Flow'].idxmin()
+            df_flow.at[adjustment, 'B_Flow'] += diff
 
-def allocate_flows_fixed(df, origin, total_outflow, expected_values):
-    """
-    Allocate total outflow to destinations based on biased flow probabilities and fixed expected values.
+        # Drop intermediate columns
+        df_flow.drop(columns=['Percentile Value', 'Numerator'], inplace=True)
 
-    Parameters:
-    df (pd.DataFrame): The DataFrame containing the data with biased flow probabilities.
-    origin (str): The origin from which to allocate the total outflow.
-    total_outflow (int): The total outflow to allocate.
-    expected_values (dict): A dictionary containing the expected values for each destination.
+        return df_flow
 
-    Returns:
-    pd.DataFrame: The updated DataFrame with allocated flows.
-    """
-    df_origin = df[df['Origin'] == origin].copy()
-    for destination, expected_value in expected_values.items():
-        df_origin.loc[df_origin['Destination'] == destination, 'Allocated Flow'] = expected_value
-    
-    return df
+    def allocate_flows_fixed(self, origin, total_outflow, expected_values):
+        """
+        Allocate total outflow to destinations based on biased flow probabilities and fixed expected values.
 
-# Provided test data
+        Parameters:
+        origin (str): The origin from which to allocate the total outflow.
+        total_outflow (int): The total outflow to allocate.
+        expected_values (dict): A dictionary containing the expected values for each destination.
+
+        Returns:
+        pd.DataFrame: The updated DataFrame with allocated flows.
+        """
+        df_flow = self.df_flow[self.df_flow['Origin'] == origin].copy()
+        for destination, expected_value in expected_values.items():
+            df_flow.loc[df_flow['Destination'] == destination, 'Allocated Flow'] = expected_value
+        
+        return df_flow
+
+
+# below is a tutorial to run this class
 data = {
     'Destination': ['53033000101', '53033000102', '53033000103'],
     'Origin': ['53033000100', '53033000100', '53033000100'],
-    'Income': [150, 30, 40],
-    'Income of Origin': [100, 100, 100],
-    'Income of Destination': [150, 270, 260],
-    'Vulnerability Score': [0.5, 0.7, 0.2],
+    'demographic_col_origin': [100, 100, 100],
+    'demographic_col_destination': [150, 270, 260],
     'Population': [20, 100, 50],
     'Flow': [10, 5, 3]
 }
 
 df = pd.DataFrame(data)
+
+# Instantiate the BiasedFlowCalculator class with ascending rank order
+calculator_asc = BiasedFlowCalculator(df, rank_order='asc')
+df_asc = calculator_asc.calculate_biased_flow()
+
+# Instantiate the BiasedFlowCalculator class with descending rank order
+calculator_desc = BiasedFlowCalculator(df, rank_order='desc')
+df_desc = calculator_desc.calculate_biased_flow()
+
+# Display the updated DataFrames
+
+df_asc, df_desc
+
