@@ -82,9 +82,9 @@ class FlowEvaluator:
         Parameters
         ----------
         accuracy_metric : str
-            The accuracy metric to be used for calculating accuracy. Currently supports 'mean_squared_error'.
+            The accuracy metric to be used for calculating accuracy. Supports 'mean_squared_error' and 'CPC'.
         """
-        self.mse_per_bucket = {}
+        self.performance_per_bucket = {}
         for bucket_pair in self.flows['bucket_pair'].unique():
             if bucket_pair == (-1, -1):
                 continue
@@ -95,8 +95,22 @@ class FlowEvaluator:
             if len(real_flows) > 0 and len(gen_flows) > 0:
                 if accuracy_metric == "mean_squared_error":
                     mse = mean_squared_error(real_flows, gen_flows)
+                    self.performance_per_bucket[bucket_pair] = mse
+                elif accuracy_metric == "CPC":
+                    cpc_numerator = 2 * np.sum(np.minimum(gen_flows, real_flows))
+                    cpc_denominator = np.sum(gen_flows) + np.sum(real_flows)
+                    cpc = cpc_numerator / cpc_denominator
+                    self.performance_per_bucket[bucket_pair] = cpc
                 # Add more accuracy metrics as needed
-                self.mse_per_bucket[bucket_pair] = mse
+
+    def calculate_variance(self, variance_metric, values):
+        if variance_metric == "kl_divergence":
+            uniform_dist = np.full_like(values, fill_value=1/len(values))
+            kl_div = np.sum(values * np.log(values / uniform_dist))
+            return kl_div
+        elif variance_metric == "standard_deviation":
+            return np.nanstd(values)
+        
 
     def evaluate_fairness(self, accuracy_metric, variance_metric, demographic_column):
         """
@@ -107,7 +121,7 @@ class FlowEvaluator:
         accuracy_metric : str
             The accuracy metric to be used for calculating accuracy. Currently supports 'mean_squared_error'.
         variance_metric : str
-            The variance metric to be used for calculating fairness. Currently supports 'np.nanvar'.
+            The variance metric to be used for calculating fairness. Currently supports 'standard_deviation','kl_divergence'
         demographic_column : str
             The column name in the features DataFrame to be used for creating demographic buckets.
 
@@ -124,14 +138,16 @@ class FlowEvaluator:
 
         # Create a 10x10 matrix of accuracy
         self.accuracy_matrix = np.full((10, 10), np.nan)
-        for (i, j), mse in self.mse_per_bucket.items():
-            self.accuracy_matrix[i, j] = mse
-            self.accuracy_matrix[j, i] = mse
+        for (i, j), performance in self.performance_per_bucket.items():
+            self.accuracy_matrix[i, j] = performance
+            self.accuracy_matrix[j, i] = performance
 
-        # Define fairness as the variance of accuracy across buckets
-        if variance_metric == "np.nanvar":
-            fairness = np.nanvar(list(self.mse_per_bucket.values()))
-        # Add more variance metrics as needed
+        # Normalize accuracy values for variance calculation
+        normalized_accuracy_values = np.array(list(self.performance_per_bucket.values()))
+        normalized_accuracy_values /= normalized_accuracy_values.sum()
+
+        # Calculate variance using the specified metric
+        fairness = self.calculate_variance(variance_metric, normalized_accuracy_values)
 
         # Plot heatmap of accuracy
         plt.figure(figsize=(10, 8))
