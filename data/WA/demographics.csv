@@ -1,4 +1,4 @@
-﻿STATE,GEOID,LOCATION,AREA_SQMI,SVI Score
+﻿STATE,geoid,LOCATION,AREA_SQMI,svi
 Washington,53001950100,"Census Tract 9501, Adams County, Washington",623.649886,0.6654
 Washington,53001950200,"Census Tract 9502, Adams County, Washington",1015.199183,0.4531
 Washington,53001950301,"Census Tract 9503.01, Adams County, Washington",166.7831516,0.9481

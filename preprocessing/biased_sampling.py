@@ -1,111 +1,107 @@
 import pandas as pd
 import numpy as np
+import os
 
-class BiasedFlowCalculator:
-    def __init__(self, df_flow, rank_order='asc'):
-        """
-        Initialize the BiasedFlowCalculator with a DataFrame and rank order.
+def merge_data(features, demographics, flow, demographic_column_name='svi'):
+    """
+    Merges feature, demographic, and flow data into a single DataFrame.
 
-        Parameters:
-        df_flow (pd.DataFrame): DataFrame containing the flow data.
-        rank_order (str): Order to rank the demographic delta ('asc' for ascending, 'desc' for descending).
-        """
-        self.df_flow = df_flow
-        self.rank_order = rank_order
+    Parameters:
+    - features: DataFrame containing 'total_population' and 'geoid'
+    - demographics: DataFrame with 'geoid' and other demographic columns
+    - flow: DataFrame containing 'geoid_o', 'geoid_d', and 'pop_flows'
+    - demographic_column_name: The demographic column to consider from the demographics DataFrame (default 'svi')
 
-    def calculate_biased_flow(self):
-        """
-        Calculate biased flow and B_Flow for each origin with rounding.
+    Returns:
+    - DataFrame with columns ['geoid_o', 'geoid_d', 'demographic_o', 'demographic_d', 'population_o', 'population_d', 'pop_flows']
+    """
 
-        Returns:
-        pd.DataFrame: The DataFrame with additional columns:
-                      - 'Demographic Delta': Absolute difference between the origin's demographic and the destination's demographic.
-                      - 'Demographic Rank': Rank of the demographic delta for each destination within the origin.
-                      - 'Cumulative Population': Cumulative population of destinations with lower/higher demographic based on rank order.
-                      - 'Percentile': Percentile based on the cumulative population.
-                      - 'Biased Flow': Biased flow value calculated based on the given formula.
-                      - 'B_Flow': Rounded biased flow value, adjusted to ensure the total outflow remains the same.
-        """
-        df_flow = self.df_flow.copy()
-        # Step 1: Calculate absolute Demographic Delta and create Demographic Rank
-        df_flow['Demographic Delta'] = abs(df_flow['demographic_col_origin'] - df_flow['demographic_col_destination'])
+    # Merge to get demographic and population for origin
+    origin_merge = pd.merge(flow, demographics[['geoid', demographic_column_name]], how='left', left_on='geoid_o', right_on='geoid')
+    origin_merge.rename(columns={demographic_column_name: 'demographic_o'}, inplace=True)
+    origin_merge = pd.merge(origin_merge, features[['geoid', 'total_population']], how='left', left_on='geoid_o', right_on='geoid')
+    origin_merge.rename(columns={'total_population': 'population_o'}, inplace=True)
 
-        # Step 2: Rank within each origin
-        df_flow['Demographic Rank'] = df_flow.groupby('Origin')['Demographic Delta'].rank(ascending=self.rank_order == 'asc', method='min')
+    # Merge to get demographic and population for destination
+    destination_merge = pd.merge(origin_merge, demographics[['geoid', demographic_column_name]], how='left', left_on='geoid_d', right_on='geoid')
+    destination_merge.rename(columns={demographic_column_name: 'demographic_d'}, inplace=True)
+    destination_merge = pd.merge(destination_merge, features[['geoid', 'total_population']], how='left', left_on='geoid_d', right_on='geoid')
+    destination_merge.rename(columns={'total_population': 'population_d'}, inplace=True)
 
-        # Step 3: Sort values within each origin and create Cumulative Population
-        df_flow = df_flow.sort_values(['Origin', 'Demographic Rank'], ascending=[True, True])
-        df_flow['Cumulative Population'] = df_flow.groupby('Origin')['Population'].cumsum() - df_flow['Population']
+    # Select and return the necessary columns
+    final_df = destination_merge[['geoid_o', 'geoid_d', 'demographic_o', 'demographic_d', 'population_o', 'population_d', 'pop_flows']]
+    final_df = final_df.dropna()
 
-        # Step 4: Create Percentile
-        total_population_per_origin = df_flow.groupby('Origin')['Population'].transform('sum')
-        df_flow['Percentile'] = (df_flow['Cumulative Population'] + 0.5 * df_flow['Population']) / total_population_per_origin * 100
-        df_flow['Percentile'] = df_flow['Percentile'].apply(lambda x: f'{x:.2f}%')
+    return final_df
 
-        # Step 5: Calculate Biased Flow
-        df_flow['Percentile Value'] = df_flow['Percentile'].str.rstrip('%').astype(float) / 100
-        df_flow['Numerator'] = (df_flow['Percentile Value'] + 0.5) * df_flow['Flow']
-        denominator_per_origin = df_flow.groupby('Origin')['Numerator'].transform('sum')
-        df_flow['Biased Flow'] = df_flow['Numerator'] / denominator_per_origin
 
-        # Step 6: Calculate B_Flow
-        total_outflow_per_origin = df_flow.groupby('Origin')['Flow'].transform('sum')
-        df_flow['B_Flow'] = df_flow['Biased Flow'] * total_outflow_per_origin
+def calculate_biased_flow(features, demographics, flow, demographic_column_name='svi', method=1, order="ascending", sampling=False, experiment_id="0", bias_factor=0.5):
+    """
+    Adjusts flow data based on demographic biases.
 
-        # Step 7: Round B_Flow to integers
-        df_flow['B_Flow'] = df_flow['B_Flow'].round()
+    Parameters:
+    - features: DataFrame containing 'total_population' and 'geoid'.
+    - demographics: DataFrame with 'geoid' and other demographic columns.
+    - flow: DataFrame containing 'geoid_o', 'geoid_d', and 'pop_flows'.
+    - demographic_column_name: demographic column to consider (default 'svi').
+    - method: 1 for delta between origin and destination, 2 for destination only (default 1).
+    - order: "ascending" or "descending" for sorting demographics (default "ascending").
+    - sampling: True for probabilistic sampling, False for deterministic calculation (default False).
+    - experiment_id: ID for saving the output (default "0").
+    - bias_factor: Factor to adjust bias (default 0.5).
 
-        # Adjust B_Flow to ensure total outflow remains the same within each origin
-        adjustment_needed = df_flow.groupby('Origin')['Flow'].sum() - df_flow.groupby('Origin')['B_Flow'].sum()
-        for origin, diff in adjustment_needed.items():
-            if diff != 0:
-                adjustment_index = df_flow[df_flow['Origin'] == origin]['B_Flow'].idxmax() if diff > 0 else df_flow[df_flow['Origin'] == origin]['B_Flow'].idxmin()
-                df_flow.at[adjustment_index, 'B_Flow'] += diff
+    Returns:
+    - None. Saves the biased flow DataFrame to a specified path.
+    """
+    # Call the merge_data function to merge all required data
+    result_df = merge_data(features, demographics, flow, demographic_column_name)
 
-        # Drop intermediate columns
-        df_flow.drop(columns=['Percentile Value', 'Numerator'], inplace=True)
+    # Create the demographic delta if method == 1
+    if method == 1:
+        result_df['delta_demographic'] = result_df['demographic_d'] - result_df['demographic_o']
+        bias_column = 'delta_demographic'
+    elif method == 2:
+        bias_column = 'demographic_d'
+    else:
+        raise ValueError('Invalid method. Method should be 1 (for delta) or 2 (for destination only).')
 
-        return df_flow
+    # Calculate the adjustment factors for each geoid_o
+    grouped = result_df.groupby('geoid_o')
+    biased_flows = []
 
-    def allocate_flows_fixed(self, origin, total_outflow, expected_values):
-        """
-        Allocate total outflow to destinations based on biased flow probabilities and fixed expected values.
-
-        Parameters:
-        origin (str): The origin from which to allocate the total outflow.
-        total_outflow (int): The total outflow to allocate.
-        expected_values (dict): A dictionary containing the expected values for each destination.
-
-        Returns:
-        pd.DataFrame: The updated DataFrame with allocated flows.
-        """
-        df_flow = self.df_flow[self.df_flow['Origin'] == origin].copy()
-        for destination, expected_value in expected_values.items():
-            df_flow.loc[df_flow['Destination'] == destination, 'Allocated Flow'] = expected_value
+    for name, group in grouped:
+        group = group.copy()
+        total_outflow = group['pop_flows'].sum()
         
-        return df_flow
+        # Sort based on the demographic value in chosen order
+        group = group.sort_values(by=bias_column, ascending=(order == "ascending"))
+        
+        # Calculate cumulative population and percentiles
+        group['cumulative'] = group['population_d'].cumsum() - 0.5 * group['population_d']
+        group['percentile'] = group['cumulative'] / group['population_d'].sum()
 
+        # Calculate adjusted flows
+        group['adjustment_factor'] = group['pop_flows']*(group['percentile'] + bias_factor)
+        group['adjustment_factor'] = group['adjustment_factor']/ group['adjustment_factor'].sum()
 
-# Provided test data
-data = {
-    'Destination': ['53033000101', '53033000102', '53033000103', '53033000105', '53033000107'],
-    'Origin': ['53033000100', '53033000100', '53033000100', '53033000104', '53033000104'],
-    'demographic_col_origin': [100, 100, 100, 200, 200],
-    'demographic_col_destination': [150, 270, 260, 280, 300],
-    'Population': [20, 100, 50, 100, 400],
-    'Flow': [10, 5, 3, 20, 10]
-}
+        if sampling == False:
+            group['adjusted_flows'] = group['adjustment_factor'] * total_outflow
+        else: 
+            np.random.choice(group['geoid_d'], size=int(total_outflow), p=group['adjustment_factor'])
 
-df = pd.DataFrame(data)
-pd.set_option('display.max_columns', None)
+        biased_flows.append(group)
+    
+    biased_flows_df = pd.concat(biased_flows)
+    final_flows_df = biased_flows_df[['geoid_o', 'geoid_d', 'adjusted_flows']].copy()
+    final_flows_df.rename(columns={'adjusted_flows':'pop_flows'}, inplace= True)
 
-# Instantiate the BiasedFlowCalculator class with ascending rank order
-calculator_asc = BiasedFlowCalculator(df, rank_order='asc')
-df_asc = calculator_asc.calculate_biased_flow()
+    # Choose file name based on sampling
+    file_suffix = 'sampled_flows' if sampling else 'biased_flows'
 
-# Instantiate the BiasedFlowCalculator class with descending rank order
-calculator_desc = BiasedFlowCalculator(df, rank_order='desc')
-df_desc = calculator_desc.calculate_biased_flow()
+    # Construct the save path
+    save_path = f"../processed_data/{experiment_id}/train/{demographic_column_name}/{method}_{order}_{file_suffix}.csv"
 
-print(df_asc.head())
-print(df_desc.head())
+    # Create directories and save the result
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    final_flows_df.to_csv(save_path, index=False)
+    print(f"Saved adjusted flows to {save_path}")
