@@ -59,5 +59,3 @@ def plot_grid_and_census_tracts(grid, census_tracts, train_set, test_set):
     plt.title('Grid and Census Tracts Tessellation')
     plt.show()
 
-
-
