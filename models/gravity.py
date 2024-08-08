@@ -35,9 +35,9 @@ def grav_Model(tessellation_train, tessellation_test,
 
     # Access the flow data file location and read the flow data
     train_data = skmob.FlowDataFrame.from_file(flow_data_train_location, tessellation=tessellation_train, tile_id='GEOID', sep=',')
-    train_data['flow'] = train_data['flow'].replace(0, 1)
+    # train_data['flow'] = train_data['flow'].replace(0, 1)
     test_data = skmob.FlowDataFrame.from_file(flow_data_test_location, tessellation=tessellation_test, tile_id='GEOID', sep=',')
-    test_data['flow'] = test_data['flow'].replace(0, 1)
+    # test_data['flow'] = test_data['flow'].replace(0, 1)
 
     # Sum the flow values for each origin, exclude intra-location flows
     outflows_train = train_data[train_data['origin'] != train_data['destination']].groupby('origin')[['flow']].sum().fillna(1)
@@ -71,16 +71,16 @@ def grav_Model(tessellation_train, tessellation_test,
 
     # Rename the synthetic column and save to .csv file
     if out_format == 'flows':
-        synth_fdf_fitted.rename(columns={'flow': 'synthetic_flows'}, inplace=True)
+        synth_fdf_fitted.rename(columns={'flow': 'flow'}, inplace=True)
     elif out_format == 'probabilities':
-        synth_fdf_fitted.rename(columns={'flow': 'synthetic_probabilities'}, inplace=True)
+        synth_fdf_fitted.rename(columns={'flow': 'probability'}, inplace=True)
     else:
         print("Invalid outputs format. Outputs format be 'flows' or 'probabilities'.")
 
     # Create output path and save files
     path_parts = flow_data_train_location.split(os.sep)
     experiment_id = path_parts[2]
-    output_path = os.path.join('..', 'outputs', experiment_id)
+    output_path = os.path.join('..', 'outputs', experiment_id, 'synthetic_data')
 
     if not path_parts[5].endswith('csv'):
         demo_feature = path_parts[5]

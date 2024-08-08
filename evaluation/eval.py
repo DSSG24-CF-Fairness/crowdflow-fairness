@@ -53,7 +53,7 @@ class FlowEvaluator:
             The column name in the features DataFrame to be used for creating demographic buckets.
         """
         self.features['bucket'] = pd.qcut(self.features[demographic_column], q=10, labels=False)
-        self.geoid_to_bucket = dict(zip(self.features['GEOID'], self.features['bucket']))
+        self.geoid_to_bucket = dict(zip(self.features['geoid'], self.features['bucket']))
 
     def assign_buckets(self):
         """
@@ -73,7 +73,9 @@ class FlowEvaluator:
         """
         Merges the real and generated flows DataFrames on the origin and destination columns.
         """
-        self.merged_flows = pd.merge(self.flows, self.generated_flows, on=['origin', 'destination'], suffixes=('_real', '_gen'))
+        self.merged_flows = pd.merge(self.generated_flows, self.flows, on=['origin', 'destination'], how='left',
+                                     suffixes=('_gen', '_real'))
+        self.merged_flows['flow_real'].fillna(0, inplace=True)
 
     def calculate_accuracy(self, accuracy_metric):
         """
@@ -158,7 +160,7 @@ class FlowEvaluator:
         # Plot heatmap of accuracy
         plt.figure(figsize=(10, 8))
         sns.heatmap(self.accuracy_matrix, annot=True, cmap='viridis', cbar=True, square=True)
-        plt.title('Heatmap of Accuracy (MSE) by Demographic Buckets')
+        plt.title(f'Heatmap of {accuracy_metric} by Demographic Buckets')
         plt.xlabel('Origin Demographic Buckets')
         plt.ylabel('Destination Demographic Buckets')
         plt.show()
