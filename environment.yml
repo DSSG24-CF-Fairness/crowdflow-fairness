@@ -1,4 +1,4 @@
-name: pycharm_crowdflow
+name: crowdflow
 channels:
   - defaults
 dependencies:
@@ -170,4 +170,4 @@ dependencies:
     - widgetsnbextension==4.0.11
     - xyzservices==2024.6.0
     - zipp==3.19.2
-prefix: /Users/apple/opt/anaconda3/envs/pycharm_crowdflow
+# prefix: /Users/apple/opt/anaconda3/envs/pycharm_crowdflow
