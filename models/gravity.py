@@ -80,14 +80,14 @@ def grav_Model(tessellation_train, tessellation_test,
     # Create output path and save files
     path_parts = flow_data_train_location.split(os.sep)
     experiment_id = path_parts[2]
-    output_path = os.path.join('..', 'outputs', experiment_id, 'synthetic_data')
+    output_path = os.path.join('..', 'outputs', experiment_id, f'synthetic_data_{gravity_type}')
 
-    if not path_parts[5].endswith('csv'):
-        demo_feature = path_parts[5]
+    if path_parts[-2] != "flows":
+        demo_feature = path_parts[-2]
         output_path = os.path.join(output_path, demo_feature)
 
     os.makedirs(output_path, exist_ok=True)
-    filename = f'synthetic_{gravity_type}_{out_format}.csv'
+    filename = f'{path_parts[-1]}'
     file_path = os.path.join(output_path, filename)
 
     synth_fdf_fitted.to_csv(file_path, index=False)
