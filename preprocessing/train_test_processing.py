@@ -64,7 +64,7 @@ def flow_train_test_split(tessellation_df, features_df, grid, experiment_id='0',
     Map census tracts to grid cells based on population and split the data into train and test sets using stratified shuffle split.
 
     Parameters:
-    flow_df (pd.DataFrame): DataFrame containing origin and destination flow data with geoid, longitude, and latitude.
+    flow_df (pd.DataFrame): DataFrflow_train_test_splitame containing origin and destination flow data with geoid, longitude, and latitude.
     features_df (pd.DataFrame): DataFrame containing population data for census tracts with geoid and total population.
     grid (geopandas.GeoDataFrame): GeoDataFrame containing the grid cells with geometry and area_index.
     experiment_id (str): Identifier for the experiment, used in naming output files. Default is '0'.
@@ -75,22 +75,13 @@ def flow_train_test_split(tessellation_df, features_df, grid, experiment_id='0',
     .csv: Two .csv files are saved for train and test region indices.
     """
 
-    # TODO: what if it is not washington?
-    # Define the input and output coordinate systems
-    input_crs = pyproj.CRS.from_epsg(2927)  # Washington State Plane North (EPSG:2927)
-    output_crs = pyproj.CRS.from_epsg(4326)  # WGS84 (EPSG:4326)
-
-    # Create a transformer object for the coordinate conversion
-    transformer = pyproj.Transformer.from_crs(input_crs, output_crs, always_xy=True)
-
     # Convert the X and Y coordinates to latitude and longitude
-    tessellation_df['lng'], tessellation_df['lat'] = transformer.transform(tessellation_df['XCOORD'].values, tessellation_df['YCOORD'].values)
-    tessellation_df['geometry'] = gpd.points_from_xy(tessellation_df['lng'], tessellation_df['lat'])
-    census_tracts_gdf = gpd.GeoDataFrame(tessellation_df[['GEOID', 'lng', 'lat', 'geometry']], geometry='geometry')
+    tessellation_df['centroid'] = gpd.points_from_xy(tessellation_df['lng'], tessellation_df['lat'])
+    census_tracts_gdf = gpd.GeoDataFrame(tessellation_df[['GEOID', 'lng', 'lat', 'geometry', 'centroid']], geometry='centroid')
 
     # Match census tracts with grid cells
-    matched_gdf = gpd.sjoin(census_tracts_gdf, grid[['geometry', 'region_index']], how='left', op='within')
-    matched_gdf = matched_gdf.drop(columns='geometry').fillna(-1).astype({'GEOID': 'int', 'region_index': 'int'})
+    matched_gdf = gpd.sjoin(census_tracts_gdf, grid[['geometry', 'region_index']], how='left')
+    matched_gdf = matched_gdf.drop(columns='centroid').fillna(-1).astype({'GEOID': 'int', 'region_index': 'int'})
     matched_gdf = matched_gdf[['GEOID', 'region_index']].rename(columns={'GEOID': 'geoid'})
     merged_df = pd.merge(matched_gdf, features_df, on='geoid', how='left').fillna(0).astype({'total_population': 'int'})
     grouped_df = merged_df.groupby('region_index').agg(
@@ -222,8 +213,8 @@ def filter_train_test_data(flow_df, tessellation_df, features_df, train_set, tes
     # Save files to their respective directories
     train_flows[['origin', 'destination', 'flow']].to_csv(train_flows_dir + 'train_flow.csv', index=False)
     test_flows[['origin', 'destination', 'flow']].to_csv(test_flows_dir + 'test_flow.csv', index=False)
-    train_tessellation.to_file(train_tessellation_dir + 'train_tessellation.geojson', driver='GeoJSON')
-    test_tessellation.to_file(test_tessellation_dir + 'test_tessellation.geojson', driver='GeoJSON')
+    train_tessellation[['GEOID', 'lng', 'lat', 'geometry', 'total_population']].to_file(train_tessellation_dir + 'train_tessellation.geojson', driver='GeoJSON')
+    test_tessellation[['GEOID', 'lng', 'lat', 'geometry', 'total_population']].to_file(test_tessellation_dir + 'test_tessellation.geojson', driver='GeoJSON')
     train_features.to_csv(train_features_dir + 'train_features.csv', index=False)
     test_features.to_csv(test_features_dir + 'test_features.csv', index=False)
 

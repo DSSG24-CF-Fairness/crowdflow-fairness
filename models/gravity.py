@@ -35,9 +35,7 @@ def grav_Model(tessellation_train, tessellation_test,
 
     # Access the flow data file location and read the flow data
     train_data = skmob.FlowDataFrame.from_file(flow_data_train_location, tessellation=tessellation_train, tile_id='GEOID', sep=',')
-    # train_data['flow'] = train_data['flow'].replace(0, 1)
     test_data = skmob.FlowDataFrame.from_file(flow_data_test_location, tessellation=tessellation_test, tile_id='GEOID', sep=',')
-    # test_data['flow'] = test_data['flow'].replace(0, 1)
 
     # Sum the flow values for each origin, exclude intra-location flows
     outflows_train = train_data[train_data['origin'] != train_data['destination']].groupby('origin')[['flow']].sum().fillna(1)
