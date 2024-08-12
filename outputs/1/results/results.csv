@@ -1,0 +1,6 @@
+data,a,fairness_kl_divergence_CPC,accuracy_CPC
+train_flow,gravity_singly_constrained,0.01337703138804307,0.2863387810579544
+1_ascending_biased_flow,gravity_singly_constrained,0.013421956054325196,0.28055797524645765
+1_descending_biased_flow,gravity_singly_constrained,0.01311374832710344,0.2861760388498589
+2_ascending_biased_flow,gravity_singly_constrained,0.013421956054325208,0.2805579752464571
+2_descending_biased_flow,gravity_singly_constrained,0.01311374832710344,0.2861760388498589

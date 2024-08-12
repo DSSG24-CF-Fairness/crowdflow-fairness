@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -191,6 +192,26 @@ class FlowEvaluator:
         # Calculate variance using the specified metric
         fairness = self.calculate_variance(variance_metric, normalized_accuracy_values)
 
+        # Create directory to store heatmaps
+
+        path_parts = self.generated_flows_path.split('/')
+        # Extract the desired parts of the path and create a new path for heat maps
+        heat_maps_path = os.path.join(path_parts[0], path_parts[1], path_parts[2], 'results', 'heatmaps')
+        # Check if the directory exists, if not, create it
+        if not os.path.exists(heat_maps_path):
+            os.makedirs(heat_maps_path)
+            print(f"Directory created: {heat_maps_path}")
+        else:
+            print(f"Directory already exists: {heat_maps_path}")
+
+        # Get filename from generated_flows_path and modify it
+        filename = os.path.basename(self.generated_flows_path)  # Get the base name, e.g., 'synthetic_data_gravity_singly_constrained'
+        filename = filename.replace('.csv', '')  # Remove '.csv' if present
+        filename += '_heatmap.png'  
+
+        # Full path to save the heatmap
+        full_heatmap_path = os.path.join(heat_maps_path, filename)
+
         # Plot heatmap of accuracy
         plt.figure(figsize=(10, 8))
         sns.heatmap(self.accuracy_matrix, annot=True, cmap='Blues', cbar=True, square=True)
@@ -199,6 +220,11 @@ class FlowEvaluator:
         plt.ylabel('Destination Demographic Buckets')
         plt.gca().invert_yaxis()
         plt.show()
+
+        # Save the heatmap to file
+        plt.savefig(full_heatmap_path)
+        plt.close()
+        print(f"Heatmap saved to {full_heatmap_path}")
 
         # Print results 
         print(f'Fairness Metric ({variance_metric} of {accuracy_metric}): {fairness}')

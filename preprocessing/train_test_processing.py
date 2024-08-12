@@ -77,7 +77,9 @@ def flow_train_test_split(tessellation_df, features_df, grid, experiment_id='0',
 
     # Convert the X and Y coordinates to latitude and longitude
     tessellation_df['centroid'] = gpd.points_from_xy(tessellation_df['lng'], tessellation_df['lat'])
-    census_tracts_gdf = gpd.GeoDataFrame(tessellation_df[['GEOID', 'lng', 'lat', 'geometry', 'centroid']], geometry='centroid')
+    census_tracts_gdf = gpd.GeoDataFrame(tessellation_df[['GEOID', 'lng', 'lat', 'centroid']], geometry='centroid')
+    census_tracts_gdf = census_tracts_gdf.set_crs('epsg:4326', allow_override=True)
+
 
     # Match census tracts with grid cells
     matched_gdf = gpd.sjoin(census_tracts_gdf, grid[['geometry', 'region_index']], how='left')
@@ -93,7 +95,7 @@ def flow_train_test_split(tessellation_df, features_df, grid, experiment_id='0',
 
     # Sort by population and create stratified splits
     sorted_df = grouped_df.sort_values(by='grid_population', ascending=False)
-    splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.5, random_state=1202)
+    splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.5, random_state=122)
     sorted_df['stratify'] = sorted_df.index % 2
     for train_idx, test_idx in splitter.split(sorted_df, sorted_df['stratify']):
         train_set = sorted_df.iloc[train_idx]

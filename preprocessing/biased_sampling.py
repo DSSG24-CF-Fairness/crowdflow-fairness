@@ -54,7 +54,17 @@ def merge_data(features_df, demographics_df, flow_df, demographic_column_name='s
     return final_df
 
 
-def calculate_biased_flow(features_df, demographics_df, flow_df, demographic_column_name='svi', method=1, order='ascending', sampling=False, experiment_id='0', bias_factor=0.5):
+def calculate_biased_flow(features_df, 
+                          demographics_df, 
+                          flow_df, 
+                          demographic_column_name='svi', 
+                          method=1, 
+                          order='ascending', 
+                          sampling=False, 
+                          sample_id = None,
+                          experiment_id='0', 
+                          bias_factor=0.5
+                          ):
     """
     Adjusts flow data to account for demographic biases.
 
@@ -78,11 +88,10 @@ def calculate_biased_flow(features_df, demographics_df, flow_df, demographic_col
 
     # Call the merge_data function to merge all required data
     result_df = merge_data(features_df, demographics_df, flow_df, demographic_column_name, experiment_id= experiment_id)
-    print(result_df.shape)
 
     # Create the demographic delta if method == 1
     if method == 1:
-        result_df['delta_demographic'] = result_df['demographic_d'] - result_df['demographic_o']
+        result_df['delta_demographic'] = abs(result_df['demographic_d'] - result_df['demographic_o'])
         bias_column = 'delta_demographic'
     elif method == 2:
         bias_column = 'demographic_d'
@@ -108,10 +117,12 @@ def calculate_biased_flow(features_df, demographics_df, flow_df, demographic_col
         group['adjustment_factor'] = group['flow']*(group['percentile'] + bias_factor)
         group['adjustment_factor'] = group['adjustment_factor']/ group['adjustment_factor'].sum()
 
-        if sampling == False:
+        if sampling is False:
             group['adjusted_flows'] = group['adjustment_factor'] * total_outflow
         else: 
-            np.random.choice(group['destination'], size=int(total_outflow), p=group['adjustment_factor'])
+            sampled_destinations = np.random.choice(group['destination'], size=int(total_outflow), p=group['adjustment_factor'], replace=True)
+            group['adjusted_flows'] = pd.Series(sampled_destinations).value_counts().reindex(group['destination']).fillna(0).values
+            
 
         biased_flows.append(group)
     
@@ -120,7 +131,7 @@ def calculate_biased_flow(features_df, demographics_df, flow_df, demographic_col
     final_flows_df.rename(columns={'adjusted_flows':'flow'}, inplace= True)
 
     # Choose file name based on sampling
-    file_suffix = 'sampled_flow' if sampling else 'biased_flow'
+    file_suffix = f'sampled_flow_{sample_id}' if sampling else 'biased_flow'
 
     # Construct the save path
     save_path = f'../processed_data/{experiment_id}/train/flows/{demographic_column_name}/{method}_{order}_{file_suffix}.csv'
