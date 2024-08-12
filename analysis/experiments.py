@@ -3,6 +3,7 @@ import sys
 import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
+import concurrent.futures
 
 sys.path.append(os.path.abspath('../preprocessing'))
 from train_test_processing import *
@@ -99,16 +100,28 @@ class ExperimentRunner:
         # Run model for all train data
         test_flow_path = f"../processed_data/{self.experiment_id}/test/flows/test_flow.csv"
 
-        for dirpath, dirname, filenames in os.walk(f'../processed_data/{self.experiment_id}/train/flows'):
-            for filename in filenames:
-                if filename.endswith('.csv'):
-                    # Construct the full file path
-                    file_path = os.path.join(dirpath, filename)
-                    # You can now open and process each CSV file as needed
-                    print("Running model:", file_path)
-                    self.run_model(file_path, test_flow_path)
+        # for dirpath, dirname, filenames in os.walk(f'../processed_data/{self.experiment_id}/train/flows'):
+        #     for filename in filenames:
+        #         if filename.endswith('.csv'):
+        #             # Construct the full file path
+        #             file_path = os.path.join(dirpath, filename)
+        #             # You can now open and process each CSV file as needed
+        #             print("Running model:", file_path)
+        #             self.run_model(file_path, test_flow_path)
                     
-        
+        # Run model for all train data (execute parallely)
+
+        # Construct the path to search for files
+        base_path = f'../processed_data/{self.experiment_id}/train/flows'
+        csv_files = [os.path.join(dirpath, filename)
+                     for dirpath, _, filenames in os.walk(base_path)
+                     for filename in filenames if filename.endswith('.csv')]
+
+        # Using a process pool to execute tasks concurrently
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            # Use a lambda to include the static test_flow_path with each task
+            executor.map(lambda file_path: self.run_model(file_path, test_flow_path), csv_files)
+
         # Evaluate model on demographic columns
         results = [] 
         for demographic in self.demographic_columns:
