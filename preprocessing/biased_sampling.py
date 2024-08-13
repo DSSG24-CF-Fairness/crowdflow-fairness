@@ -49,9 +49,12 @@ def merge_data(features_df, demographics_df, flow_df, demographic_column_name='s
         missing_data_df.to_csv(output_path, index=False)
         print(f'Missing train sampling flow diagnostic saved to {output_path}.')
 
+    # Drop rows with flow value of NaN and 0
     final_df = final_df.dropna()
+    final_df = final_df.loc[final_df['flow'] > 0]
 
     return final_df
+
 
 
 def calculate_biased_flow(features_df, 
@@ -87,7 +90,7 @@ def calculate_biased_flow(features_df,
     """
 
     # Call the merge_data function to merge all required data
-    result_df = merge_data(features_df, demographics_df, flow_df, demographic_column_name, experiment_id= experiment_id)
+    result_df = merge_data(features_df, demographics_df, flow_df, demographic_column_name, experiment_id=experiment_id)
 
     # Create the demographic delta if method == 1
     if method == 1:
@@ -122,13 +125,16 @@ def calculate_biased_flow(features_df,
         else: 
             sampled_destinations = np.random.choice(group['destination'], size=int(total_outflow), p=group['adjustment_factor'], replace=True)
             group['adjusted_flows'] = pd.Series(sampled_destinations).value_counts().reindex(group['destination']).fillna(0).values
-            
 
         biased_flows.append(group)
     
     biased_flows_df = pd.concat(biased_flows)
     final_flows_df = biased_flows_df[['origin', 'destination', 'adjusted_flows']].copy()
     final_flows_df.rename(columns={'adjusted_flows':'flow'}, inplace= True)
+
+    # Drop rows with flow value of NaN and 0
+    final_flows_df = final_flows_df[(final_flows_df['flow'].notna())]
+    final_flows_df = final_flows_df.loc[final_flows_df['flow'] > 0]
 
     # Choose file name based on sampling
     file_suffix = f'sampled_flow_{sample_id}' if sampling else 'biased_flow'

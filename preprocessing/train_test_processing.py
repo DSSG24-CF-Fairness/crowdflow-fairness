@@ -204,13 +204,11 @@ def filter_train_test_data(flow_df, tessellation_df, features_df, train_set, tes
     train_flows = train_flows.rename(columns={'geoid_o': 'origin', 'geoid_d': 'destination', 'pop_flows': 'flow'})
     test_flows = test_flows.rename(columns={'geoid_o': 'origin', 'geoid_d': 'destination', 'pop_flows': 'flow'})
 
-    # Drop rows with flow value of NaN
+    # Drop rows with flow value of NaN and 0
     train_flows = train_flows[(train_flows['flow'].notna())]
     test_flows = test_flows[(test_flows['flow'].notna())]
-
-    # Replace 0 with 1e-5 in the 'flow' column
-    train_flows['flow'] = train_flows['flow'].replace(0, 1)
-    test_flows['flow'] = test_flows['flow'].replace(0, 1)
+    train_flows = train_flows.loc[train_flows['flow'] > 0]
+    test_flows = test_flows.loc[test_flows['flow'] > 0]
 
     # Save files to their respective directories
     train_flows[['origin', 'destination', 'flow']].to_csv(train_flows_dir + 'train_flow.csv', index=False)

@@ -16,7 +16,7 @@ class FlowEvaluator:
     generated_flows_path : str
         Path to the CSV file containing the generated flow data.
     demographics_path : str
-        Path to the CSV file containing the demographic features data.
+        Path to the CSV file containing the demographic feature data.
     """
 
     def __init__(self, flows_path, generated_flows_path, demographics_path):
@@ -30,7 +30,7 @@ class FlowEvaluator:
         generated_flows_path : str
             Path to the CSV file containing the generated flow data.
         demographics_path : str
-            Path to the CSV file containing the demographic features data.
+            Path to the CSV file containing the demographic feature data.
         """
         self.flows_path = flows_path
         self.generated_flows_path = generated_flows_path
@@ -55,25 +55,6 @@ class FlowEvaluator:
         """
         self.demographics['bucket'] = pd.qcut(self.demographics[demographic_column], q=10, labels=False)
         self.geoid_to_bucket = dict(zip(self.demographics['geoid'], self.demographics['bucket']))
-
-    # def assign_buckets(self):
-    #     """
-    #     Assigns each flow pair to a demographic bucket pair using vectorized operations.
-    #     """
-    #     # Vectorize the mapping from geoid to bucket
-    #     self.flows['origin_bucket'] = self.flows['origin'].map(self.geoid_to_bucket).fillna(-1).astype(int)
-    #     self.flows['destination_bucket'] = self.flows['destination'].map(self.geoid_to_bucket).fillna(-1).astype(int)
-
-    #     # Ensure that the pairs are sorted
-    #     self.flows['bucket_pair'] = self.flows.apply(
-    #         lambda row: tuple(sorted((row['origin_bucket'], row['destination_bucket']))), axis=1
-    #     )
-
-    #     self.generated_flows['origin_bucket'] = self.generated_flows['origin'].map(self.geoid_to_bucket).fillna(-1).astype(int)
-    #     self.generated_flows['destination_bucket'] = self.generated_flows['destination'].map(self.geoid_to_bucket).fillna(-1).astype(int)
-    #     self.generated_flows['bucket_pair'] = self.generated_flows.apply(
-    #         lambda row: tuple(sorted((row['origin_bucket'], row['destination_bucket']))), axis=1
-    #     )
 
     def assign_buckets(self):
         """
@@ -193,10 +174,11 @@ class FlowEvaluator:
         fairness = self.calculate_variance(variance_metric, normalized_accuracy_values)
 
         # Create directory to store heatmaps
-
         path_parts = self.generated_flows_path.split('/')
+
         # Extract the desired parts of the path and create a new path for heat maps
         heat_maps_path = os.path.join(path_parts[0], path_parts[1], path_parts[2], 'results', 'heatmaps')
+
         # Check if the directory exists, if not, create it
         if not os.path.exists(heat_maps_path):
             os.makedirs(heat_maps_path)
@@ -214,17 +196,24 @@ class FlowEvaluator:
 
         # Plot heatmap of accuracy
         plt.figure(figsize=(10, 8))
-        sns.heatmap(self.accuracy_matrix, annot=True, cmap='Blues', cbar=True, square=True)
-        plt.title(f'Heatmap of {accuracy_metric} by Demographic Buckets')
-        plt.xlabel('Origin Demographic Buckets')
-        plt.ylabel('Destination Demographic Buckets')
+        heatmap = sns.heatmap(self.accuracy_matrix, annot=True, cmap='Blues', cbar=True, square=True, vmin = 0, vmax = 1)
+        plt.title(f'Heatmap of {accuracy_metric} by Demographic Buckets', fontsize=16)
+        plt.xlabel('Origin Demographic Buckets', fontsize=14)
+        plt.ylabel('Destination Demographic Buckets', fontsize=14)
+
+        # Customize the color legend
+        cbar = heatmap.collections[0].colorbar
+        cbar.set_label(f'{accuracy_metric}', fontsize=14)
+        cbar.ax.tick_params(labelsize=12)  # Increase the size of the legend's text
         plt.gca().invert_yaxis()
-        plt.show()
 
         # Save the heatmap to file
         plt.savefig(full_heatmap_path)
         plt.close()
         print(f"Heatmap saved to {full_heatmap_path}")
+
+        # Display the plot
+        plt.show()
 
         # Print results 
         print(f'Fairness Metric ({variance_metric} of {accuracy_metric}): {fairness}')
