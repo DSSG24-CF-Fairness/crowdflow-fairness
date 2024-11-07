@@ -1,3 +1,4 @@
 .DS_Store
 .idea
-pycache
+__pycache__
+/gravity_model/results
