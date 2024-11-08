@@ -28,10 +28,27 @@ folder_name = 'WA'
 flow_df = pd.read_csv(f'../data/{folder_name}/flow.csv')
 tessellation_df = gpd.read_file(f'../data/{folder_name}/tessellation.geojson')
 features_df =pd.read_csv(f'../data/{folder_name}/features.csv')
-test_set = pd.read_csv(f'../data/{folder_name}/test_tile_geoids.csv')
-train_set = pd.read_csv(f'../data/{folder_name}/train_tile_geoids.csv')
 demographics_df = pd.read_csv(f'../data/{folder_name}/demographics.csv')
 
+
+base_data_path = '../data/WA'
+
+region = load_state_or_county_data(f"{base_data_path}/boundary.geojson")
+features_df = pd.read_csv(f"{base_data_path}/features.csv")
+tessellation_df = load_state_or_county_data(f"{base_data_path}/tessellation.geojson")
+grid = create_grid(region.unary_union, 25)
+train_output, test_output = flow_train_test_split(tessellation_df, features_df, grid, folder_name)
+
+
+
+
+
+
+
+'''
+test_set = pd.read_csv(f'../data/{folder_name}/test_tile_geoids.csv')
+train_set = pd.read_csv(f'../data/{folder_name}/train_tile_geoids.csv')
+'''
 
 
 
@@ -139,6 +156,8 @@ features_path = f'../data/{folder_name}/demographics.csv'
 
 
 # NLG
+
+'''
 model_type = 'NLG'
 log_path = f'../evaluation/{folder_name}_{model_type}_log.csv'
 
@@ -170,3 +189,4 @@ for i in range(0, 21):
         log_writer.writerow([file_suffix, fairness, accuracy])
 
     print(f"Fairness results for {file_suffix} logged to '{folder_name}_{model_type}_log.csv'")
+'''

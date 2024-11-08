@@ -59,7 +59,7 @@ def create_grid(polygon, cell_size_km, crs='EPSG:4326'):
     return grid_gdf
 
 
-def flow_train_test_split(tessellation_df, features_df, grid, crs='EPSG:4326'):
+def flow_train_test_split(tessellation_df, features_df, grid, folder_name, crs='EPSG:4326'):
     """
     Map census tracts to grid cells based on population and split the data into train and test sets using stratified shuffle split.
 
@@ -104,12 +104,14 @@ def flow_train_test_split(tessellation_df, features_df, grid, crs='EPSG:4326'):
     train_set.reset_index(inplace=True)
     test_set.reset_index(inplace=True)
 
-    # Create directories if they do not exist
-    os.makedirs(f'../processed_data/train/', exist_ok=True)
-    os.makedirs(f'../processed_data/test/', exist_ok=True)
-    
-    train_set[['region_index']].to_csv(f'../processed_data/train/train_region_index.csv', index=False)
-    train_set[['region_index']].to_csv(f'../processed_data/test/test_region_index.csv', index=False)
+    train_set[['region_index']].to_csv(f'../processed_data/{folder_name}/train_region_index.csv', index=False)
+    test_set[['region_index']].to_csv(f'../processed_data/{folder_name}/test_region_index.csv', index=False)
+
+    train_tile_geoids = train_set[['region_index', 'census_tracts_geoids']]
+    train_tile_geoids.to_csv(f'../processed_data/{folder_name}/train_tile_geoids.csv', index=False)
+
+    test_tile_geoids = test_set[['region_index', 'census_tracts_geoids']]
+    test_tile_geoids.to_csv(f'../processed_data/{folder_name}/test_tile_geoids.csv', index=False)
 
     return train_set[['region_index', 'census_tracts_geoids']], test_set[['region_index', 'census_tracts_geoids']]
 
