@@ -4,3 +4,5 @@ __pycache__
 /gravity_model/results
 
 
+/deepgravity_optimize_loss_func/data
+/deepgravity_optimize_loss_func/results
