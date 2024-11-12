@@ -24,32 +24,32 @@ from eval import *
 
 
 
-folder_name = 'WA'
+folder_name = 'NY'
 flow_df = pd.read_csv(f'../data/{folder_name}/flow.csv')
 tessellation_df = gpd.read_file(f'../data/{folder_name}/tessellation.geojson')
 features_df =pd.read_csv(f'../data/{folder_name}/features.csv')
 demographics_df = pd.read_csv(f'../data/{folder_name}/demographics.csv')
 
 
-base_data_path = '../data/WA'
-
-region = load_state_or_county_data(f"{base_data_path}/boundary.geojson")
-features_df = pd.read_csv(f"{base_data_path}/features.csv")
-tessellation_df = load_state_or_county_data(f"{base_data_path}/tessellation.geojson")
-grid = create_grid(region.unary_union, 25)
-train_output, test_output = flow_train_test_split(tessellation_df, features_df, grid, folder_name)
-
-
-
-
-
-
-
-'''
-test_set = pd.read_csv(f'../data/{folder_name}/test_tile_geoids.csv')
-train_set = pd.read_csv(f'../data/{folder_name}/train_tile_geoids.csv')
-'''
-
+# base_data_path = '../data/WA'
+#
+# region = load_state_or_county_data(f"{base_data_path}/boundary.geojson")
+# features_df = pd.read_csv(f"{base_data_path}/features.csv")
+# tessellation_df = load_state_or_county_data(f"{base_data_path}/tessellation.geojson")
+# grid = create_grid(region.unary_union, 25)
+# train_output, test_output = flow_train_test_split(tessellation_df, features_df, grid, folder_name)
+#
+#
+#
+#
+#
+#
+#
+#
+# test_set = pd.read_csv(f'../data/{folder_name}/test_tile_geoids.csv')
+# train_set = pd.read_csv(f'../data/{folder_name}/train_tile_geoids.csv')
+#
+#
 
 
 # filter_train_test_data(flow_df, tessellation_df, features_df, train_set, test_set, folder_name, balance_sets=False)
@@ -68,24 +68,24 @@ train_set = pd.read_csv(f'../data/{folder_name}/train_tile_geoids.csv')
 
 
 # Run model for all train data
-# test_flow_path = f"../processed_data/{folder_name}/test/test_flow.csv"
-#
-# for dirpath, dirname, filenames in os.walk(f'../processed_data/{folder_name}/train'):
-#     for idx, filename in enumerate(filenames):
-#         if 'flow' in filename:
-#             file_path = os.path.join(dirpath, filename)
-#             print("Running model:", file_path)
-#
-#             tessellation_train = gpd.read_file(f"../processed_data/{folder_name}/train/train_tessellation.geojson")
-#             tessellation_test = gpd.read_file(f"../processed_data/{folder_name}/test/test_tessellation.geojson")
-#
-#             grav_Model(tessellation_train, tessellation_test, file_path, test_flow_path, "gravity_singly_constrained", 'flows', folder_name = folder_name)
+test_flow_path = f"../processed_data/{folder_name}/test/test_flow.csv"
+
+for dirpath, dirname, filenames in os.walk(f'../processed_data/{folder_name}/train'):
+    for idx, filename in enumerate(filenames):
+        if 'svi_1_descending_sampled_flow_3.csv' in filename:
+            file_path = os.path.join(dirpath, filename)
+            print("Running model:", file_path)
+
+            tessellation_train = gpd.read_file(f"../processed_data/{folder_name}/train/train_tessellation.geojson")
+            tessellation_test = gpd.read_file(f"../processed_data/{folder_name}/test/test_tessellation.geojson")
+
+            grav_Model(tessellation_train, tessellation_test, file_path, test_flow_path, "gravity_singly_constrained", 'flows', folder_name = folder_name)
 
 
 
-folder_name = 'NY'
-demographic_column = 'svi'
-features_path = f'../data/{folder_name}/demographics.csv'
+# folder_name = 'WA'
+# demographic_column = 'svi'
+# features_path = f'../data/{folder_name}/demographics.csv'
 
 
 # Gravity
@@ -121,11 +121,11 @@ features_path = f'../data/{folder_name}/demographics.csv'
 
 
 
-# DG
+# # DG
 # model_type = 'DG'
 # log_path = f'../evaluation/{folder_name}_{model_type}_log.csv'
-
-# dgfolder_name = 'new_york'
+#
+# dgfolder_name = 'washington'
 # with open(log_path, mode='w', newline='') as log_file:
 #     log_writer = csv.writer(log_file)
 #     log_writer.writerow(['file_name', 'fairness', 'accuracy'])
@@ -155,38 +155,37 @@ features_path = f'../data/{folder_name}/demographics.csv'
 #     print(f"Fairness results for {file_suffix} logged to '{folder_name}_{model_type}_log.csv'")
 
 
-# NLG
+# # NLG
+# model_type = 'NLG'
+# log_path = f'../evaluation/{folder_name}_{model_type}_log.csv'
+#
+# nlgfolder_name = 'washington'
+# with open(log_path, mode='w', newline='') as log_file:
+#     log_writer = csv.writer(log_file)
+#     log_writer.writerow(['file_name', 'fairness', 'accuracy'])
+#
+# # Loop over the range 0 to 21
+# for i in range(0, 21):
+#     file_suffix = f'{nlgfolder_name}{i}'
+#
+#     flows_path = f'../processed_data/{folder_name}/test/test_flow.csv'
+#     generated_flows_path = f'../deepgravity/results/predicted_od2flow_{model_type}_{file_suffix}.csv'
+#
+#     # Initialize evaluator for the current file set
+#     evaluator = FlowEvaluator(flows_path, generated_flows_path, features_path, model_type, folder_name)
+#
+#     # Evaluate fairness and accuracy
+#     fairness, accuracy = evaluator.evaluate_fairness(
+#         accuracy_metric='CPC',
+#         variance_metric='kl_divergence',
+#         demographic_column=demographic_column
+#     )
+#
+#     # Append fairness results to the log CSV file
+#     with open(log_path, mode='a', newline='') as log_file:
+#         log_writer = csv.writer(log_file)
+#         log_writer.writerow([file_suffix, fairness, accuracy])
+#
+#     print(f"Fairness results for {file_suffix} logged to '{folder_name}_{model_type}_log.csv'")
 
-'''
-model_type = 'NLG'
-log_path = f'../evaluation/{folder_name}_{model_type}_log.csv'
 
-nlgfolder_name = 'new_york'
-with open(log_path, mode='w', newline='') as log_file:
-    log_writer = csv.writer(log_file)
-    log_writer.writerow(['file_name', 'fairness', 'accuracy'])
-
-# Loop over the range 0 to 21
-for i in range(0, 21):
-    file_suffix = f'{nlgfolder_name}{i}'
-
-    flows_path = f'../processed_data/{folder_name}/test/test_flow.csv'
-    generated_flows_path = f'../deepgravity/results/predicted_od2flow_{model_type}_{file_suffix}.csv'
-
-    # Initialize evaluator for the current file set
-    evaluator = FlowEvaluator(flows_path, generated_flows_path, features_path, model_type, folder_name)
-
-    # Evaluate fairness and accuracy
-    fairness, accuracy = evaluator.evaluate_fairness(
-        accuracy_metric='CPC',
-        variance_metric='kl_divergence',
-        demographic_column=demographic_column
-    )
-
-    # Append fairness results to the log CSV file
-    with open(log_path, mode='a', newline='') as log_file:
-        log_writer = csv.writer(log_file)
-        log_writer.writerow([file_suffix, fairness, accuracy])
-
-    print(f"Fairness results for {file_suffix} logged to '{folder_name}_{model_type}_log.csv'")
-'''

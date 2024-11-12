@@ -18,7 +18,6 @@ from importlib.machinery import SourceFileLoader
 
 from tqdm import tqdm
 
-from convert_to_NLG import convert_to_NLG
 
 # Training settings
 parser = argparse.ArgumentParser(description='DeepGravity')
@@ -69,8 +68,6 @@ if model_type == 'DG':
     dataset_dir = "processed_DG"
 elif model_type == 'NLG':
     dataset_dir = "processed_NLG"
-    print('Converting to NLG Data...')
-    convert_to_NLG(args.dataset)
 db_dir = './data/' + data_name
 
 

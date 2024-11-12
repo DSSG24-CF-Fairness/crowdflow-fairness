@@ -83,3 +83,4 @@ def plot_fairness_vs_accuracy(location_name, file_name):
 
 plot_fairness_vs_accuracy('WA', 'washington')
 plot_fairness_vs_accuracy('NY', 'new_york')
+# plot_fairness_vs_accuracy('NY_NEW', 'new_york_new')
