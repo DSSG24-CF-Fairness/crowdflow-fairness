@@ -4,44 +4,36 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
-
+import csv
 
 class FlowEvaluator:
     """
     A class used to evaluate the fairness of generated flow data compared to real flow data.
 
-    Attributes
-    ----------
-    flows_path : str
-        Path to the CSV file containing the real flow data.
-    generated_flows_path : str
-        Path to the CSV file containing the generated flow data.
-    demographics_path : str
-        Path to the CSV file containing the demographic feature data.
     """
 
     def __init__(self, flows_path, generated_flows_path, demographics_path, model_type, folder_name):
-        """
-        Initializes the FlowEvaluator with the paths to the data files.
-
-        Parameters
-        ----------
-        flows_path : str
-            Path to the CSV file containing the real flow data.
-        generated_flows_path : str
-            Path to the CSV file containing the generated flow data.
-        demographics_path : str
-            Path to the CSV file containing the demographic feature data.
-        model_type : str
-            The type of model used to generate the flow data.
-        folder_name : str
-            The name of the folder (location) containing the data files.
-        """
         self.flows_path = flows_path
         self.generated_flows_path = generated_flows_path
         self.demographics_path = demographics_path
         self.model_type = model_type
         self.folder_name = folder_name
+        # Initialize the save path based on accuracy and variance metrics
+        self.save_path = None
+
+    def init_log(self, accuracy_metric, variance_metric):
+        """
+        Initializes the log file path and writes headers if the log file does not exist.
+        """
+        self.save_path = f'../evaluation/{self.folder_name}_{self.model_type}/{accuracy_metric}/{variance_metric}/'
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(self.save_path), exist_ok=True)
+        # Create log file with headers if it doesn't exist
+        self.log_path = os.path.join(self.save_path, f'{self.folder_name}_{self.model_type}_log.csv')
+        if not os.path.isfile(self.log_path):
+            with open(self.log_path, mode='w', newline='') as log_file:
+                log_writer = csv.writer(log_file)
+                log_writer.writerow(['file_name', 'fairness', 'accuracy'])
 
     def load_data(self):
         """
@@ -105,7 +97,7 @@ class FlowEvaluator:
             gen_flows = self.merged_flows[self.merged_flows['bucket_pair_gen'] == bucket_pair]['flow_gen']
 
             if len(real_flows) > 0 and len(gen_flows) > 0:
-                if accuracy_metric == "mean_squared_error":
+                if accuracy_metric == "MSE":
                     mse = mean_squared_error(real_flows, gen_flows)
                     self.performance_per_bucket[bucket_pair] = mse
                 elif accuracy_metric == "CPC":
@@ -125,7 +117,7 @@ class FlowEvaluator:
         total_real_flows = self.merged_flows['flow_real']
         total_gen_flows = self.merged_flows['flow_gen']
 
-        if accuracy_metric == "mean_squared_error":
+        if accuracy_metric == "MSE":
             self.total_performance = mean_squared_error(total_real_flows, total_gen_flows)
         elif accuracy_metric == "CPC":
             cpc_numerator = 2 * np.sum(np.minimum(total_gen_flows, total_real_flows))
@@ -191,24 +183,21 @@ class FlowEvaluator:
         # Create directory to store heatmaps
         path_parts = self.generated_flows_path.split('/')
 
-        # Extract the desired parts of the path and create a new path for heat maps
-        heat_maps_path = os.path.join(path_parts[0], 'evaluation', f'{self.folder_name}_{self.model_type}_heatmaps')
-
         # Check if the directory exists, if not, create it
-        if not os.path.exists(heat_maps_path):
-            os.makedirs(heat_maps_path)
-            print(f"Directory created: {heat_maps_path}")
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path)
+            print(f"Directory created: {self.save_path}")
         else:
-            print(f"Directory already exists: {heat_maps_path}")
+            print(f"Directory already exists: {self.save_path}")
 
         # Get filename from generated_flows_path and modify it
         filename = os.path.basename(
             self.generated_flows_path)  # Get the base name, e.g., 'synthetic_data_gravity_singly_constrained'
         filename = filename.replace('.csv', '')  # Remove '.csv' if present
-        filename += '_heatmap.png'
+        filename += f'_heatmap.png'
 
         # Full path to save the heatmap
-        full_heatmap_path = os.path.join(heat_maps_path, filename)
+        full_heatmap_path = os.path.join(self.save_path, filename)
 
         # Plot heatmap of accuracy
         plt.figure(figsize=(10, 8))
@@ -234,6 +223,14 @@ class FlowEvaluator:
         # Print results
         print(f'Fairness Metric ({variance_metric} of {accuracy_metric}): {fairness}')
         print(f'Overall {accuracy_metric}: {self.total_performance}')
+
+
+        # Append results to log file
+        with open(self.log_path, mode='a', newline='') as log_file:
+            log_writer = csv.writer(log_file)
+            log_writer.writerow([filename, fairness, self.total_performance])
+        print(f"Results for {filename} logged to '{self.folder_name}_{self.model_type}_log.csv'")
+
 
         return fairness, self.total_performance
 

@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial import ConvexHull
 
-def plot_fairness_vs_accuracy(location_name, file_name):
-    results_G = pd.read_csv(f"../evaluation/{location_name}_G_log.csv")
-    results_DG = pd.read_csv(f"../evaluation/{location_name}_DG_log.csv")
-    results_NLG = pd.read_csv(f"../evaluation/{location_name}_NLG_log.csv")
+def plot_fairness_vs_accuracy(G_path, DG_path, NLG_path, location_name, file_name):
+    results_G = pd.read_csv(G_path)
+    results_DG = pd.read_csv(DG_path)
+    results_NLG = pd.read_csv(NLG_path)
 
     data = {
         f"{location_name}_G": (results_G['accuracy'], results_G['fairness']),
@@ -18,6 +18,7 @@ def plot_fairness_vs_accuracy(location_name, file_name):
     point_colors = {"unbiased": "red", "ascending": "blue", "descending": "grey"}
 
     plt.figure(figsize=(10, 6))
+
 
     # Function to determine label based on filename
     def get_label(filename):
@@ -56,17 +57,45 @@ def plot_fairness_vs_accuracy(location_name, file_name):
             plt.plot(points[simplex, 0], points[simplex, 1], color=hull_colors[label], linewidth=1)  # Hull edges in dataset color
         plt.fill(points[hull.vertices, 0], points[hull.vertices, 1], color=hull_colors[label], alpha=0.2)  # Hull fill
 
+    hull_metrics = {}  # To store hull measurements for each dataset
+    for label, (accuracy, fairness) in data.items():
+        points = np.column_stack((accuracy, fairness))
+        hull = ConvexHull(points)
+
+        # Calculate height, width, and area of the hull
+        min_x, max_x = points[hull.vertices, 0].min(), points[hull.vertices, 0].max()
+        min_y, max_y = points[hull.vertices, 1].min(), points[hull.vertices, 1].max()
+
+        width = max_x - min_x
+        height = max_y - min_y
+        area = hull.volume  # ConvexHull's `volume` property gives the 2D area for 2D points
+
+        hull_metrics[label] = {
+            "height": height,
+            "width": width,
+            "area": area
+        }
+    # Display hull metrics for each model
+    for label, metrics in hull_metrics.items():
+        print(f"Metrics for {label}:")
+        print(f"  Height: {metrics['height']}")
+        print(f"  Width: {metrics['width']}")
+        print(f"  Area: {metrics['area']}\n")
+
+
     plt.xlabel('Accuracy (Mean CPC)')
     plt.ylabel('Fairness (KL Divergence for CPC)')
     plt.title(f'Fairness vs. Accuracy for {location_name}')
     plt.ylim(plt.ylim())
     plt.xlim(plt.xlim())
 
+
     # Add the custom legend with padding
     plt.legend(handles=[
         legend_handles["hull_G"],
         legend_handles["hull_DG"],
         legend_handles["hull_NLG"],
+        # legend_handles["hull_DGOPT"],
         legend_handles["unbiased"],
         legend_handles["ascending"],
         legend_handles["descending"]
@@ -81,6 +110,6 @@ def plot_fairness_vs_accuracy(location_name, file_name):
 
 
 
-plot_fairness_vs_accuracy('WA', 'washington')
-plot_fairness_vs_accuracy('NY', 'new_york')
+# plot_fairness_vs_accuracy('WA', 'washington')
+# plot_fairness_vs_accuracy('NY', 'new_york')
 # plot_fairness_vs_accuracy('NY_NEW', 'new_york_new')

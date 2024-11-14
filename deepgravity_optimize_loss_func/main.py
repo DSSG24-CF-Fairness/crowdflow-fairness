@@ -126,8 +126,9 @@ def train(epoch):
             output = model.forward(data)
             # loss += model.loss(output, target)
 
-            svi_values = torch.tensor([geoid_to_svi[int(tar_id[0])] * 0.15 + 0.925 for tar_id in tar_ids]).cuda()
-            svi_values = torch.tensor([1 for tar_id in tar_ids]).cuda()
+            # TODO: CHANGE PARAMETERS TO USE THE SVI LOSS FUNCTION
+            svi_values = torch.tensor([geoid_to_svi[int(tar_id[0])] * 2 + 0 for tar_id in tar_ids]).cuda()
+            # svi_values = torch.tensor([1 for tar_id in tar_ids]).cuda()
             cur_loss = model.svi_loss(output, target, svi_values)
             new_loss += cur_loss
         new_loss.backward()
@@ -135,7 +136,7 @@ def train(epoch):
         running_loss += new_loss.item()
 
         avg_loss = running_loss / (batch_idx + 1)
-        progress_bar.set_postfix({"loss": f"{avg_loss:.4f}"})  # Format avg_loss to 4 decimal places
+        progress_bar.set_postfix({"loss": f"{new_loss:.4f}"})  # Format avg_loss to 4 decimal places
 
         if batch_idx % args.log_interval == 0:
             if batch_idx * len(b_data) == len(train_loader) - 1:
@@ -256,6 +257,17 @@ for (o, d), f in od2flow.items():
 # read demographics.csv from db_dir
 demographics = pd.read_csv(os.path.join(db_dir, 'demographics.csv'))
 geoid_to_svi = demographics.set_index('geoid')['svi'].to_dict()
+for key in geoid_to_svi.keys():
+    if geoid_to_svi[key] < 0:
+        geoid_to_svi[key] = 0.5
+
+# convert this dict to a dataframe
+geoid_to_svi_pd = pd.DataFrame.from_dict(geoid_to_svi, orient='index', columns=['svi'])
+# get the largest and smallest values
+max_svi = geoid_to_svi_pd['svi'].max()
+min_svi = geoid_to_svi_pd['svi'].min()
+print('Max SVI:', max_svi)
+print('Min SVI:', min_svi)
 
 
 train_dataset_args = {'tileid2oa2features2vals': tileid2oa2features2vals,

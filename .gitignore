@@ -2,7 +2,11 @@
 .idea
 __pycache__
 /gravity_model/results
-
-
+/gravity_model/results_archived
+/deepgravity/data
+/deepgravity/results
 /deepgravity_optimize_loss_func/data
 /deepgravity_optimize_loss_func/results
+/deepgravity_new_bias/data
+/deepgravity_new_bias/results
+/processed_data_archived
