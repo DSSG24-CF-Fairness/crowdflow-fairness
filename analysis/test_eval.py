@@ -9,21 +9,15 @@ from pathlib import Path
 import csv
 
 
-sys.path.append(os.path.abspath('../preprocessing'))
-from train_test_processing import *
-
-# NOTE: choose bias sampling or bias sampling new here
-sys.path.append(os.path.abspath('../preprocessing'))
-from biased_sampling_new import *
-
-sys.path.append(os.path.abspath('../gravity_model'))
-from gravity import *
 
 sys.path.append(os.path.abspath('../evaluation'))
 from eval import *
 
+sys.path.append(os.path.abspath('../evaluation'))
+from eval_plot import *
 
-folder_name = 'NY'
+
+folder_name = 'WA'
 demographic_column = 'svi'
 demographics_path = f'../data/{folder_name}/demographics.csv'
 
@@ -51,3 +45,12 @@ for accuracy_metric in accuracy_metric_list:
                         variance_metric=variance_metric,
                         demographic_column=demographic_column
                     )
+
+
+
+
+
+location_name = 'WA'
+accuracy_type = 'CPC'
+metric_type = 'kl_divergence'
+plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type)

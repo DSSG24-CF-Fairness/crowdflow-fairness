@@ -157,8 +157,3 @@ def plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type):
 
 
 
-
-location_name = 'WA'
-accuracy_type = 'CPC'
-metric_type = 'kl_divergence'
-plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type)
