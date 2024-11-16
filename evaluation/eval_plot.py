@@ -1,12 +1,19 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 import numpy as np
 from scipy.spatial import ConvexHull
+import re
 
-def plot_fairness_vs_accuracy(G_path, DG_path, NLG_path, location_name, file_name):
-    results_G = pd.read_csv(G_path)
-    results_DG = pd.read_csv(DG_path)
-    results_NLG = pd.read_csv(NLG_path)
+
+
+
+
+
+def plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type):
+    results_G = pd.read_csv(f"../evaluation/{location_name}_G/{accuracy_type}/{metric_type}/{location_name}_G_log.csv")
+    results_DG = pd.read_csv(f"../evaluation/{location_name}_DG/{accuracy_type}/{metric_type}/{location_name}_DG_log.csv")
+    results_NLG = pd.read_csv(f"../evaluation/{location_name}_NLG/{accuracy_type}/{metric_type}/{location_name}_NLG_log.csv")
 
     data = {
         f"{location_name}_G": (results_G['accuracy'], results_G['fairness']),
@@ -14,47 +21,75 @@ def plot_fairness_vs_accuracy(G_path, DG_path, NLG_path, location_name, file_nam
         f"{location_name}_NLG": (results_NLG['accuracy'], results_NLG['fairness'])
     }
 
-    hull_colors = {f"{location_name}_G": "yellow", f"{location_name}_DG": "green", f"{location_name}_NLG": "orange"}
+    # display(data)
+
+    hull_colors = {f"{location_name}_G": "pink", f"{location_name}_DG": "green", f"{location_name}_NLG": "orange"}
     point_colors = {"unbiased": "red", "ascending": "blue", "descending": "grey"}
+    point_shapes = {"0": "o", "1": "s", "2": "^"}
 
     plt.figure(figsize=(10, 6))
 
-
-    # Function to determine label based on filename
     def get_label(filename):
-        index = int(filename.replace(f"{file_name}", ""))
-        if index == 0:
-            return "unbiased"
-        elif 1 <= index <= 5 or 11 <= index <= 15:
-            return "ascending"
-        elif 6 <= index <= 10 or 16 <= index <= 20:
-            return "descending"
+        # Gravity log files
+        if "gravity" in filename:
+            if "1_ascending" in filename:
+                return "ascending", "1"
+            elif "1_descending" in filename:
+                return "descending", "1"
+            elif "2_ascending" in filename:
+                return "ascending", "2"
+            elif "2_descending" in filename:
+                return "descending", "2"
+            else:
+                return "unbiased", "0"
 
-    # Create handles for the legend (for both point and hull colors)
-    legend_handles = {
-        "hull_G": plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='yellow', markersize=10, label=f"{location_name}_G"),
-        "hull_DG": plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='green', markersize=10, label=f"{location_name}_DG"),
-        "hull_NLG": plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='orange', markersize=10, label=f"{location_name}_NLG"),
-        "unbiased": plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='red', markersize=10, label="Unbiased"),
-        "ascending": plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', markersize=10, label="Ascending"),
-        "descending": plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='grey', markersize=10, label="Descending")
-    }
+        # DG/NLG log files
+        elif "od2flow" in filename:
+            # Extract the index from the filename using a regular expression
+            numbers = re.findall(r'\d+', filename)
+            # Convert numbers to integers (optional)
+            numbers = [int(num) for num in numbers]
+
+            index = None
+            if len(numbers) == 2:
+                index = numbers[1]
+
+            if index == 0:
+                return "unbiased", "0"
+            elif 1 <= index <= 5:
+                return "ascending", "1"
+            elif 11 <= index <= 15:
+                return "ascending", "2"
+            elif 6 <= index <= 10:
+                return "descending", "1"
+            elif 16 <= index <= 20:
+                return "descending", "2"
+            else:
+                return "unknown", "unknown"
+
 
     # Plot points for each dataset
     for label, (accuracy, fairness) in data.items():
-        for i, (acc, fair) in enumerate(zip(accuracy, fairness)):
-            # Determine label for the points (unbiased, ascending, or descending)
-            filename = f"{file_name}{i}"
-            point_label = get_label(filename)
+        # Loop through the dataset and apply get_label based on each filename
+        for i, row in results_G.iterrows():
+            point_order, point_method = get_label(row['file_name'])
+            plt.scatter(row['accuracy'], row['fairness'], color=point_colors[point_order], marker=point_shapes[point_method], label=point_order if i == 0 else "", alpha=0.7)
 
-            # Plot the points with the appropriate color for each label
-            plt.scatter(acc, fair, color=point_colors[point_label], label=point_label if i == 0 else "", alpha=0.7)
+        for i, row in results_DG.iterrows():
+            point_order, point_method = get_label(row['file_name'])  # Pass the filename to get_label
+            plt.scatter(row['accuracy'], row['fairness'], color=point_colors[point_order], marker=point_shapes[point_method], label=point_order if i == 0 else "", alpha=0.7)
+
+        for i, row in results_NLG.iterrows():
+            point_order, point_method = get_label(row['file_name'])
+            plt.scatter(row['accuracy'], row['fairness'], color=point_colors[point_order], marker=point_shapes[point_method], label=point_order if i == 0 else "", alpha=0.7)
+
 
         # Convex hull for each dataset
         points = np.column_stack((accuracy, fairness))
         hull = ConvexHull(points)
         for simplex in hull.simplices:
-            plt.plot(points[simplex, 0], points[simplex, 1], color=hull_colors[label], linewidth=1)  # Hull edges in dataset color
+            plt.plot(points[simplex, 0], points[simplex, 1], color=hull_colors[label],
+                     linewidth=1)  # Hull edges in dataset color
         plt.fill(points[hull.vertices, 0], points[hull.vertices, 1], color=hull_colors[label], alpha=0.2)  # Hull fill
 
     hull_metrics = {}  # To store hull measurements for each dataset
@@ -82,34 +117,48 @@ def plot_fairness_vs_accuracy(G_path, DG_path, NLG_path, location_name, file_nam
         print(f"  Width: {metrics['width']}")
         print(f"  Area: {metrics['area']}\n")
 
-
-    plt.xlabel('Accuracy (Mean CPC)')
-    plt.ylabel('Fairness (KL Divergence for CPC)')
-    plt.title(f'Fairness vs. Accuracy for {location_name}')
+    plt.xlabel(f'Performance (Mean {accuracy_type})')
+    plt.ylabel(f'Fairness ({metric_type})')
+    plt.title(f'Fairness vs. Performance for {location_name}')
     plt.ylim(plt.ylim())
     plt.xlim(plt.xlim())
 
 
-    # Add the custom legend with padding
-    plt.legend(handles=[
-        legend_handles["hull_G"],
-        legend_handles["hull_DG"],
-        legend_handles["hull_NLG"],
-        # legend_handles["hull_DGOPT"],
-        legend_handles["unbiased"],
-        legend_handles["ascending"],
-        legend_handles["descending"]
-    ], title="Legend", loc='upper left', bbox_to_anchor=(1, 1), borderpad=1.5, handlelength=2)
+
+    # Define legend handles for hull colors
+    hull_handles = [
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='pink', markersize=10, label=f"{location_name}_G Hull"),
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='green', markersize=10, label=f"{location_name}_DG Hull"),
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='orange', markersize=10, label=f"{location_name}_NLG Hull")
+    ]
+
+    # Define legend handles for point combinations (color and shape)
+    point_handles = [
+        mlines.Line2D([], [], color='red', marker='o', linestyle='None', markersize=8, label="Unbiased"),
+        mlines.Line2D([], [], color='blue', marker='s', linestyle='None', markersize=8, label="Ascending Method 1"),
+        mlines.Line2D([], [], color='blue', marker='^', linestyle='None', markersize=8, label="Ascending Method 2"),
+        mlines.Line2D([], [], color='grey', marker='s', linestyle='None', markersize=8, label="Descending Method 1"),
+        mlines.Line2D([], [], color='grey', marker='^', linestyle='None', markersize=8, label="Descending Method 2")
+    ]
+
+    # Combine all legend handles
+    legend_handles = hull_handles + point_handles
+
+    # Add the legend to the plot
+    plt.legend(handles=legend_handles, title="Legend", loc='upper left', bbox_to_anchor=(1, 1), borderpad=1.5, handlelength=2)
+
+
 
     plt.grid(True)
 
-    plt.savefig(f"../evaluation/{location_name}_plot.png", bbox_inches='tight')
+    plt.savefig(f"../evaluation/{location_name}_{accuracy_type}_{metric_type}_plot.png", bbox_inches='tight')
 
     plt.show()
 
 
 
 
-# plot_fairness_vs_accuracy('WA', 'washington')
-# plot_fairness_vs_accuracy('NY', 'new_york')
-# plot_fairness_vs_accuracy('NY_NEW', 'new_york_new')
+location_name = 'WA'
+accuracy_type = 'CPC'
+metric_type = 'kl_divergence'
+plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type)

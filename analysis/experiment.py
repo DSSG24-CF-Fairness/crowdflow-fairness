@@ -80,7 +80,7 @@ from eval import *
 #
 #
 #
-folder_name = 'WA'
+folder_name = 'NY'
 demographic_column = 'svi'
 demographics_path = f'../data/{folder_name}/demographics.csv'
 
@@ -89,7 +89,7 @@ variance_metric_list = ['kl_divergence', 'standard_deviation']
 
 
 # Gravity
-model_type = 'G'
+model_type = 'DG'
 
 for accuracy_metric in accuracy_metric_list:
     for variance_metric in variance_metric_list:
@@ -99,8 +99,7 @@ for accuracy_metric in accuracy_metric_list:
                     generated_flows_path = os.path.join(dirpath, filename)
                     flows_path = f'../processed_data/{folder_name}/test/test_flow.csv'
 
-                    evaluator = FlowEvaluator(flows_path, generated_flows_path, demographics_path, model_type,
-                                              folder_name)
+                    evaluator = FlowEvaluator(flows_path, generated_flows_path, demographics_path, model_type, folder_name)
                     evaluator.init_log(accuracy_metric, variance_metric)
 
                     # Evaluate fairness and accuracy
