@@ -6,7 +6,9 @@ __pycache__
 /deepgravity/data
 /deepgravity/results
 /deepgravity_optimize_loss_func/data
-/deepgravity_optimize_loss_func/results
+/deepgravity_optimize_loss_func/results_NOV-12
+/deepgravity_optimize_loss_func/results_NOV-20_5source
+/deepgravity_optimize_loss_func/results_NOV-20_e^2source
 /deepgravity_new_bias/data
 /deepgravity_new_bias/results
 /processed_data_archived

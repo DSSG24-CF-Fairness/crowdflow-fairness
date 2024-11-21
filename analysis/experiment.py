@@ -19,21 +19,20 @@ from biased_sampling_new import *
 sys.path.append(os.path.abspath('../gravity_model'))
 from gravity import *
 
-sys.path.append(os.path.abspath('../evaluation'))
-from eval import *
 
-#
-#
-# folder_name = 'WA'
-# flow_df = pd.read_csv(f'../data/{folder_name}/flow.csv')
-# tessellation_df = gpd.read_file(f'../data/{folder_name}/tessellation.geojson')
-# features_df =pd.read_csv(f'../data/{folder_name}/features.csv')
-# demographics_df = pd.read_csv(f'../data/{folder_name}/demographics.csv')
-#
-#
-#
-# base_data_path = '../data/WA'
-#
+
+
+
+folder_name = 'WA'
+flow_df = pd.read_csv(f'../data/{folder_name}/flow.csv')
+tessellation_df = gpd.read_file(f'../data/{folder_name}/tessellation.geojson')
+features_df =pd.read_csv(f'../data/{folder_name}/features.csv')
+demographics_df = pd.read_csv(f'../data/{folder_name}/demographics.csv')
+
+
+
+base_data_path = '../data/WA'
+
 # region = load_state_or_county_data(f"{base_data_path}/boundary.geojson")
 # features_df = pd.read_csv(f"{base_data_path}/features.csv")
 # tessellation_df = load_state_or_county_data(f"{base_data_path}/tessellation.geojson")
@@ -64,73 +63,18 @@ from eval import *
 
 
 
-# # Run model for all train data
-# test_flow_path = f"../processed_data/{folder_name}/test/test_flow.csv"
-#
-# for dirpath, dirname, filenames in os.walk(f'../processed_data/{folder_name}/train'):
-#     for idx, filename in enumerate(filenames):
-#         if 'flow' in filename:
-#             file_path = os.path.join(dirpath, filename)
-#             print("Running model:", file_path)
-#
-#             tessellation_train = gpd.read_file(f"../processed_data/{folder_name}/train/train_tessellation.geojson")
-#             tessellation_test = gpd.read_file(f"../processed_data/{folder_name}/test/test_tessellation.geojson")
-#
-#             grav_Model(tessellation_train, tessellation_test, file_path, test_flow_path, "gravity_singly_constrained", 'flows', folder_name = folder_name)
-#
-#
-#
-folder_name = 'NY'
-demographic_column = 'svi'
-demographics_path = f'../data/{folder_name}/demographics.csv'
+# Run model for all train data
+test_flow_path = f"../processed_data/{folder_name}/test/test_flow.csv"
 
-accuracy_metric_list = ["CPC", "overestimation", "underestimation"]
-variance_metric_list = ['kl_divergence', 'standard_deviation']
+for dirpath, dirname, filenames in os.walk(f'../processed_data/{folder_name}/train'):
+    for idx, filename in enumerate(filenames):
+        if 'flow' in filename:
+            file_path = os.path.join(dirpath, filename)
+            print("Running model:", file_path)
+
+            tessellation_train = gpd.read_file(f"../processed_data/{folder_name}/train/train_tessellation.geojson")
+            tessellation_test = gpd.read_file(f"../processed_data/{folder_name}/test/test_tessellation.geojson")
+
+            grav_Model(tessellation_train, tessellation_test, file_path, test_flow_path, "gravity_singly_constrained", 'flows', folder_name = folder_name)
 
 
-# Gravity
-model_type = 'DG'
-
-for accuracy_metric in accuracy_metric_list:
-    for variance_metric in variance_metric_list:
-        for dirpath, dirname, filenames in os.walk(f'../gravity_model/results/{folder_name}'):
-            for idx, filename in enumerate(filenames):
-                if 'flow' in filename:
-                    generated_flows_path = os.path.join(dirpath, filename)
-                    flows_path = f'../processed_data/{folder_name}/test/test_flow.csv'
-
-                    evaluator = FlowEvaluator(flows_path, generated_flows_path, demographics_path, model_type, folder_name)
-                    evaluator.init_log(accuracy_metric, variance_metric)
-
-                    # Evaluate fairness and accuracy
-                    fairness, accuracy = evaluator.evaluate_fairness(
-                        accuracy_metric=accuracy_metric,
-                        variance_metric=variance_metric,
-                        demographic_column=demographic_column
-                    )
-
-
-
-
-# # DG/NLG
-# model_type = 'NLG'
-# dgfolder_name = 'washington'
-#
-# for accuracy_metric in accuracy_metric_list:
-#     for variance_metric in variance_metric_list:
-#         for i in range(0, 21):
-#             file_suffix = f'{dgfolder_name}{i}'
-#
-#             flows_path = f'../processed_data/{folder_name}/test/test_flow.csv'
-#             generated_flows_path = f'../deepgravity_new_bias/results/predicted_od2flow_{model_type}_{file_suffix}.csv'
-#
-#             # Initialize evaluator and log
-#             evaluator = FlowEvaluator(flows_path, generated_flows_path, demographics_path, model_type, folder_name)
-#             evaluator.init_log(accuracy_metric, variance_metric)
-#
-#             # Evaluate fairness and accuracy
-#             fairness, accuracy = evaluator.evaluate_fairness(
-#                 accuracy_metric=accuracy_metric,
-#                 variance_metric=variance_metric,
-#                 demographic_column=demographic_column
-#             )

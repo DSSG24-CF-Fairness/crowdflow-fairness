@@ -201,7 +201,10 @@ class FlowEvaluator:
 
         # Plot heatmap of accuracy
         plt.figure(figsize=(10, 8))
-        heatmap = sns.heatmap(self.accuracy_matrix, annot=True, cmap='Blues', cbar=True, square=True, vmin=0, vmax=1)
+
+        accuracy_matrix_max = np.max(self.accuracy_matrix)
+        self.accuracy_matrix_normalized = self.accuracy_matrix / accuracy_matrix_max
+        heatmap = sns.heatmap(self.accuracy_matrix_normalized, annot=True, cmap='Blues', cbar=True, square=True, vmin=0, vmax=1)
         plt.title(f'Heatmap of {accuracy_metric} by Demographic Buckets', fontsize=16)
         plt.xlabel('Origin Demographic Buckets', fontsize=14)
         plt.ylabel('Destination Demographic Buckets', fontsize=14)
