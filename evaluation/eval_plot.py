@@ -23,8 +23,8 @@ def plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type):
 
     # display(data)
 
-    hull_colors = {f"{location_name}_G": "pink", f"{location_name}_DG": "green", f"{location_name}_NLG": "orange"}
-    point_colors = {"unbiased": "red", "ascending": "blue", "descending": "grey"}
+    hull_colors = {f"{location_name}_G": "cyan", f"{location_name}_DG": "gold", f"{location_name}_NLG": "mediumpurple"}
+    point_colors = {"unbiased": "red", "ascending": "darkblue", "descending": "grey"}
     point_shapes = {"0": "o", "1": "s", "2": "^"}
 
     plt.figure(figsize=(10, 6))
@@ -116,6 +116,12 @@ def plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type):
         print(f"  Height: {metrics['height']}")
         print(f"  Width: {metrics['width']}")
         print(f"  Area: {metrics['area']}\n")
+        
+    # Save hull metrics to a CSV file
+    metrics_df = pd.DataFrame.from_dict(hull_metrics, orient='index')
+    csv_path = f"../evaluation/{location_name}_{accuracy_type}_{metric_type}_sensitivity_metrics.csv"
+    metrics_df.to_csv(csv_path)
+    print(f"Sensitivity metrics saved to {csv_path}")
 
     plt.xlabel(f'Performance (Mean {accuracy_type})')
     plt.ylabel(f'Fairness ({metric_type})')
@@ -127,9 +133,9 @@ def plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type):
 
     # Define legend handles for hull colors
     hull_handles = [
-        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='pink', markersize=10, label=f"{location_name}_G Hull"),
-        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='green', markersize=10, label=f"{location_name}_DG Hull"),
-        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='orange', markersize=10, label=f"{location_name}_NLG Hull")
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='cyan', markersize=10, label=f"{location_name}_G Hull"),
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='gold', markersize=10, label=f"{location_name}_DG Hull"),
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='mediumpurple', markersize=10, label=f"{location_name}_NLG Hull")
     ]
 
     # Define legend handles for point combinations (color and shape)
