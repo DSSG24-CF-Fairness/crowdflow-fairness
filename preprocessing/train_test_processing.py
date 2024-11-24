@@ -6,38 +6,43 @@ import geopandas as gpd
 import pyproj
 from shapely.geometry import box, Point
 from sklearn.model_selection import StratifiedShuffleSplit
+from shapely.geometry import Polygon, MultiPolygon, box
 
 
-def load_state_or_county_data(file_path):
+def create_grid(geojson_path, cell_size_km, folder_name, crs='EPSG:4326'):
     """
-    Load a state or county PUMAs .geojson file and set its CRS to EPSG:4326.
+    Create a grid of cells over the given GeoJSON polygons with a specified cell size.
 
     Parameters:
-    file_path (str): The file path to the state/county's PUMAs .geojson file.
-
-    Returns:
-    geopandas.GeoDataFrame: The loaded GeoDataFrame with CRS set to EPSG:4326.
-    """
-
-    state = gpd.read_file(file_path)
-    return state.to_crs(epsg=4326)
-
-
-def create_grid(polygon, cell_size_km, crs='EPSG:4326'):
-    """
-    Create a grid of cells over a given polygon area with a specified cell size.
-
-    Parameters:
-    polygon (shapely.geometry.Polygon): The polygon area over which the grid is created.
+    geojson_path (str): Path to the GeoJSON file.
     cell_size_km (float): The size of each grid cell in kilometers.
     crs (str): The coordinate reference system for the grid. Default is 'EPSG:4326'.
 
     Returns:
     geopandas.GeoDataFrame: A GeoDataFrame containing the grid cells with their geometry and grid indices.
     """
+    # Load GeoJSON
+    gdf = gpd.read_file(geojson_path)
 
-    # Get the bounds (with buffer area) of the polygon area
-    bounds = polygon.bounds
+    # Combine all geometries into a single unified geometry
+    combined_geometry = gdf.unary_union
+
+    # Ensure that the combined geometry is in the expected CRS
+    if gdf.crs != crs:
+        combined_geometry = gdf.to_crs(crs).unary_union
+    if combined_geometry.geom_type == 'MultiPolygon':
+        combined_geometry = combined_geometry.convex_hull
+
+    # Convert to a list of polygons (for MultiPolygon handling)
+    if isinstance(combined_geometry, Polygon):
+        geometry_list = [combined_geometry]
+    # elif isinstance(combined_geometry, MultiPolygon):
+    #     geometry_list = list(combined_geometry)
+    else:
+        raise ValueError("Unsupported geometry type. Ensure input contains only Polygon or MultiPolygon.")
+
+    # Calculate bounds and adjust for buffering
+    bounds = combined_geometry.bounds
     minx, miny, maxx, maxy = bounds
     buffer = 0.1  # Adjust as needed
     minx -= buffer
@@ -45,17 +50,41 @@ def create_grid(polygon, cell_size_km, crs='EPSG:4326'):
     maxx += buffer
     maxy += buffer
 
-    cell_size = cell_size_km / 110 # Conversion from km to degrees
+    # Conversion from kilometers to degrees (approximation)
+    cell_size = cell_size_km / 110
+
+    # Generate grid cells
     x_coords = np.arange(minx, maxx, cell_size)
     y_coords = np.arange(miny, maxy, cell_size)
 
-    grid_cells = [box(x, y, x + cell_size, y + cell_size).intersection(polygon)
-                  for x in x_coords for y in y_coords
-                  if box(x, y, x + cell_size, y + cell_size).intersects(polygon)
-                  and not box(x, y, x + cell_size, y + cell_size).intersection(polygon).is_empty]
+    grid_cells = []
+    for x in x_coords:
+        for y in y_coords:
+            grid_cell = box(x, y, x + cell_size, y + cell_size)
+            # Check intersection with all polygons
+            for polygon in geometry_list:
+                if grid_cell.intersects(polygon):
+                    intersection = grid_cell.intersection(polygon)
+                    if not intersection.is_empty:
+                        grid_cells.append(intersection)
 
-    grid_gdf = gpd.GeoDataFrame(grid_cells, columns=['geometry'], crs=crs)
+    # Create GeoDataFrame for the grid
+    grid_gdf = gpd.GeoDataFrame({'geometry': grid_cells}, crs=crs)
     grid_gdf['region_index'] = range(1, len(grid_gdf) + 1)
+
+    directory_path = f'../processed_data/{folder_name}'
+    os.makedirs(directory_path, exist_ok=True)
+
+    grid_gdf.to_file(f'{directory_path}/grid.geojson', driver="GeoJSON")
+
+    # Plot the result
+    base_map = gpd.read_file(geojson_path)
+    ax = base_map.plot(edgecolor='black', alpha=0.5, figsize=(10, 8))
+    grid_gdf.plot(ax=ax, facecolor='none', edgecolor='red', linewidth=0.5)
+    plt.title("Generated Grid Within State Boundary")
+    plt.savefig(f'{directory_path}/grid.png', dpi=300)
+    plt.show()
+
     return grid_gdf
 
 
@@ -104,17 +133,19 @@ def flow_train_test_split(tessellation_df, features_df, grid, folder_name, crs='
     train_set.reset_index(inplace=True)
     test_set.reset_index(inplace=True)
 
-    train_set[['region_index']].to_csv(f'../processed_data/{folder_name}/train_region_index.csv', index=False)
-    test_set[['region_index']].to_csv(f'../processed_data/{folder_name}/test_region_index.csv', index=False)
+    directory_path = f'../processed_data/{folder_name}'
+    os.makedirs(directory_path, exist_ok=True)
+
+    train_set[['region_index']].to_csv(f'{directory_path}/train_region_index.csv', index=False)
+    test_set[['region_index']].to_csv(f'{directory_path}/test_region_index.csv', index=False)
 
     train_tile_geoids = train_set[['region_index', 'census_tracts_geoids']]
-    train_tile_geoids.to_csv(f'../processed_data/{folder_name}/train_tile_geoids.csv', index=False)
+    train_tile_geoids.to_csv(f'{directory_path}/train_tile_geoids.csv', index=False)
 
     test_tile_geoids = test_set[['region_index', 'census_tracts_geoids']]
-    test_tile_geoids.to_csv(f'../processed_data/{folder_name}/test_tile_geoids.csv', index=False)
+    test_tile_geoids.to_csv(f'{directory_path}/test_tile_geoids.csv', index=False)
 
     return train_set[['region_index', 'census_tracts_geoids']], test_set[['region_index', 'census_tracts_geoids']]
-
 
 
 def filter_train_test_data(flow_df, tessellation_df, features_df, train_set, test_set, folder_name, balance_sets=False):
@@ -174,6 +205,14 @@ def filter_train_test_data(flow_df, tessellation_df, features_df, train_set, tes
         train_geoids = set(train_pop['geoid'])
         test_geoids = set(test_pop['geoid'])
 
+    # Convert all relevant columns to strings
+    train_pop['geoid'] = train_pop['geoid'].astype(str)
+    test_pop['geoid'] = test_pop['geoid'].astype(str)
+    flow_df['geoid_o'] = flow_df['geoid_o'].astype(str)
+    flow_df['geoid_d'] = flow_df['geoid_d'].astype(str)
+    tessellation_df['GEOID'] = tessellation_df['GEOID'].astype(str)
+    features_df['geoid'] = features_df['geoid'].astype(str)
+
     # Filter datasets based on adjusted geoid sets
     train_flows = flow_df[flow_df['geoid_o'].isin(train_geoids) & flow_df['geoid_d'].isin(train_geoids)]
     test_flows = flow_df[flow_df['geoid_o'].isin(test_geoids) & flow_df['geoid_d'].isin(test_geoids)]
@@ -188,7 +227,7 @@ def filter_train_test_data(flow_df, tessellation_df, features_df, train_set, tes
         # go through each row of df
         res = set()
         for index, row in df.iterrows():
-            curr = (row["geoid_o"], row["geoid_d"], row["pop_flows"])
+            curr = (str(row["geoid_o"]), str(row["geoid_d"]), row["pop_flows"])
             res.add(curr)
         return res
 
@@ -239,7 +278,6 @@ def filter_train_test_data(flow_df, tessellation_df, features_df, train_set, tes
 
     print('Processed and saved all datasets successfully.')
 
-
     # Create directories if they do not exist
     diagnosis_path = f'../processed_data/{folder_name}'
     os.makedirs(diagnosis_path, exist_ok=True)
@@ -247,3 +285,55 @@ def filter_train_test_data(flow_df, tessellation_df, features_df, train_set, tes
     output_path = os.path.join(diagnosis_path, 'missing_flow.csv')
     missing_flow_df.to_csv(output_path, index=False)
     print(f'Missing flows have been saved to {output_path}.')
+
+
+
+def plot_grid_and_census_tracts(grid, census_tracts, train_set, test_set, folder_name):
+    """
+    Plot the grid and census tracts tessellation for a particular year, coloring them according to train/test.
+    """
+    column_name = "GEOID"
+
+    train_geoids = set()
+    test_geoids = set()
+
+    for geoids in train_set['census_tracts_geoids']:
+        train_geoids.update(geoids.split(','))
+    for geoids in test_set['census_tracts_geoids']:
+        test_geoids.update(geoids.split(','))
+
+    # Assign colors based on whether the geoid is in the train or test set
+    def assign_color(geoid):
+        if geoid in train_geoids:
+            return 'green'
+        elif geoid in test_geoids:
+            return 'red'
+        else:
+            return 'grey'
+
+    census_tracts['color'] = census_tracts[column_name].apply(assign_color)
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    # Plot census tracts first (bottom layer)
+    census_tracts.plot(ax=ax, color=census_tracts['color'], edgecolor='black', linewidth=0.5)
+
+    # Plot grid cells on top with dotted lines
+    grid.plot(ax=ax, edgecolor='black', facecolor='none', linewidth=1, linestyle='--', label='Grid Cells')
+
+    # Create a custom legend
+    handles = [
+        plt.Line2D([0], [0], color='green', lw=2, label='Train'),
+        plt.Line2D([0], [0], color='red', lw=2, label='Test'),
+        plt.Line2D([0], [0], color='grey', lw=2, label='None'),
+        plt.Line2D([0], [0], color='black', linestyle='--', lw=1, label='Grid Cells')
+    ]
+    ax.legend(handles=handles)
+
+    plt.title('Grid and Census Tracts Tessellation')
+
+    directory_path = f'../processed_data/{folder_name}'
+    os.makedirs(directory_path, exist_ok=True)
+
+    plt.savefig(f'{directory_path}/grid_and_census_tracts.png', dpi=300)
+    plt.show()
