@@ -1,4 +1,4 @@
-﻿STATE,geoid,LOCATION,AREA_SQMI,svi
+STATE,geoid,LOCATION,AREA_SQMI,svi
 Washington,53001950100,"Census Tract 9501, Adams County, Washington",623.649886,0.6654
 Washington,53001950200,"Census Tract 9502, Adams County, Washington",1015.199183,0.4531
 Washington,53001950301,"Census Tract 9503.01, Adams County, Washington",166.7831516,0.9481
@@ -56,7 +56,7 @@ Washington,53005011702,"Census Tract 117.02, Benton County, Washington",8.258582
 Washington,53005011801,"Census Tract 118.01, Benton County, Washington",158.4925359,0.4151
 Washington,53005011802,"Census Tract 118.02, Benton County, Washington",179.5048318,0.7134
 Washington,53005011900,"Census Tract 119, Benton County, Washington",63.74379463,0.706
-Washington,53005012000,"Census Tract 120, Benton County, Washington",440.4489028,-999
+Washington,53005012000,"Census Tract 120, Benton County, Washington",440.4489028,0.4737
 Washington,53007960100,"Census Tract 9601, Chelan County, Washington",1177.624773,0.6173
 Washington,53007960201,"Census Tract 9602.01, Chelan County, Washington",156.4879703,0.4387
 Washington,53007960202,"Census Tract 9602.02, Chelan County, Washington",114.5880365,0.139
@@ -104,7 +104,7 @@ Washington,53009002301,"Census Tract 23.01, Clallam County, Washington",20.55066
 Washington,53009002302,"Census Tract 23.02, Clallam County, Washington",91.25193394,0.1574
 Washington,53009002400,"Census Tract 24, Clallam County, Washington",769.0677761,0.7383
 Washington,53009940000,"Census Tract 9400, Clallam County, Washington",42.61059085,0.8025
-Washington,53009990100,"Census Tract 9901, Clallam County, Washington",0,-999
+Washington,53009990100,"Census Tract 9901, Clallam County, Washington",0.0,0.6842
 Washington,53011040101,"Census Tract 401.01, Clark County, Washington",128.8225172,0.2488
 Washington,53011040102,"Census Tract 401.02, Clark County, Washington",20.77885133,0.4027
 Washington,53011040201,"Census Tract 402.01, Clark County, Washington",22.80720576,0.4017
@@ -284,7 +284,7 @@ Washington,53021020608,"Census Tract 206.08, Franklin County, Washington",204.73
 Washington,53021020700,"Census Tract 207, Franklin County, Washington",543.6513169,0.6489
 Washington,53021020801,"Census Tract 208.01, Franklin County, Washington",231.2814857,0.8007
 Washington,53021020802,"Census Tract 208.02, Franklin County, Washington",223.2555792,0.9191
-Washington,53021980100,"Census Tract 9801, Franklin County, Washington",2.78379542,-999
+Washington,53021980100,"Census Tract 9801, Franklin County, Washington",2.78379542,0.8947
 Washington,53023970300,"Census Tract 9703, Garfield County, Washington",710.8349778,0.3953
 Washington,53025010100,"Census Tract 101, Grant County, Washington",525.5640833,0.7514
 Washington,53025010200,"Census Tract 102, Grant County, Washington",423.0285984,0.3856
@@ -1640,7 +1640,7 @@ Washington,53071920100,"Census Tract 9201, Walla Walla County, Washington",568.2
 Washington,53071920200,"Census Tract 9202, Walla Walla County, Washington",27.24562431,0.7171
 Washington,53071920301,"Census Tract 9203.01, Walla Walla County, Washington",1.011996508,0.5245
 Washington,53071920302,"Census Tract 9203.02, Walla Walla County, Washington",1.127224403,0.7934
-Washington,53071920400,"Census Tract 9204, Walla Walla County, Washington",0.884490184,-999
+Washington,53071920400,"Census Tract 9204, Walla Walla County, Washington",0.884490184,0.7368
 Washington,53071920500,"Census Tract 9205, Walla Walla County, Washington",1.476937062,0.9755
 Washington,53071920600,"Census Tract 9206, Walla Walla County, Washington",2.591154846,0.8522
 Washington,53071920701,"Census Tract 9207.01, Walla Walla County, Washington",0.715650868,0.8153
@@ -1747,7 +1747,7 @@ Washington,53077001901,"Census Tract 19.01, Yakima County, Washington",2.0432934
 Washington,53077001902,"Census Tract 19.02, Yakima County, Washington",1.863754123,0.9076
 Washington,53077002003,"Census Tract 20.03, Yakima County, Washington",2.080099814,0.9503
 Washington,53077002004,"Census Tract 20.04, Yakima County, Washington",1.250491327,0.9169
-Washington,53077002005,"Census Tract 20.05, Yakima County, Washington",1.743739721,1
+Washington,53077002005,"Census Tract 20.05, Yakima County, Washington",1.743739721,1.0
 Washington,53077002006,"Census Tract 20.06, Yakima County, Washington",1.881298597,0.8562
 Washington,53077002101,"Census Tract 21.01, Yakima County, Washington",74.43334704,0.4989
 Washington,53077002103,"Census Tract 21.03, Yakima County, Washington",26.93042724,0.7594

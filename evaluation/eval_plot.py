@@ -10,15 +10,15 @@ import re
 
 
 
-def plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type):
-    results_G = pd.read_csv(f"../evaluation/{location_name}_G/{accuracy_type}/{metric_type}/{location_name}_G_log.csv")
-    results_DG = pd.read_csv(f"../evaluation/{location_name}_DG/{accuracy_type}/{metric_type}/{location_name}_DG_log.csv")
-    results_NLG = pd.read_csv(f"../evaluation/{location_name}_NLG/{accuracy_type}/{metric_type}/{location_name}_NLG_log.csv")
+def plot_unfairness_vs_performance(location_name, performance_type, metric_type):
+    results_G = pd.read_csv(f"../evaluation/{location_name}_G/{performance_type}/{metric_type}/{location_name}_G_log.csv")
+    results_DG = pd.read_csv(f"../evaluation/{location_name}_DG/{performance_type}/{metric_type}/{location_name}_DG_log.csv")
+    results_NLG = pd.read_csv(f"../evaluation/{location_name}_NLG/{performance_type}/{metric_type}/{location_name}_NLG_log.csv")
 
     data = {
-        f"{location_name}_G": (results_G['accuracy'], results_G['fairness']),
-        f"{location_name}_DG": (results_DG['accuracy'], results_DG['fairness']),
-        f"{location_name}_NLG": (results_NLG['accuracy'], results_NLG['fairness'])
+        f"{location_name}_G": (results_G['performance'], results_G['unfairness']),
+        f"{location_name}_DG": (results_DG['performance'], results_DG['unfairness']),
+        f"{location_name}_NLG": (results_NLG['performance'], results_NLG['unfairness'])
     }
 
     # display(data)
@@ -56,36 +56,36 @@ def plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type):
 
             if index == 0:
                 return "unbiased", "0"
-            elif 1 <= index <= 5:
+            elif 1 <= index <= 6:
                 return "ascending", "1"
-            elif 11 <= index <= 15:
+            elif 13 <= index <= 18:
                 return "ascending", "2"
-            elif 6 <= index <= 10:
+            elif 7 <= index <= 12:
                 return "descending", "1"
-            elif 16 <= index <= 20:
+            elif 19 <= index <= 24:
                 return "descending", "2"
             else:
                 return "unknown", "unknown"
 
 
     # Plot points for each dataset
-    for label, (accuracy, fairness) in data.items():
+    for label, (performance, unfairness) in data.items():
         # Loop through the dataset and apply get_label based on each filename
         for i, row in results_G.iterrows():
             point_order, point_method = get_label(row['file_name'])
-            plt.scatter(row['accuracy'], row['fairness'], color=point_colors[point_order], marker=point_shapes[point_method], label=point_order if i == 0 else "", alpha=0.7)
+            plt.scatter(row['performance'], row['unfairness'], color=point_colors[point_order], marker=point_shapes[point_method], label=point_order if i == 0 else "", alpha=0.7)
 
         for i, row in results_DG.iterrows():
             point_order, point_method = get_label(row['file_name'])  # Pass the filename to get_label
-            plt.scatter(row['accuracy'], row['fairness'], color=point_colors[point_order], marker=point_shapes[point_method], label=point_order if i == 0 else "", alpha=0.7)
+            plt.scatter(row['performance'], row['unfairness'], color=point_colors[point_order], marker=point_shapes[point_method], label=point_order if i == 0 else "", alpha=0.7)
 
         for i, row in results_NLG.iterrows():
             point_order, point_method = get_label(row['file_name'])
-            plt.scatter(row['accuracy'], row['fairness'], color=point_colors[point_order], marker=point_shapes[point_method], label=point_order if i == 0 else "", alpha=0.7)
+            plt.scatter(row['performance'], row['unfairness'], color=point_colors[point_order], marker=point_shapes[point_method], label=point_order if i == 0 else "", alpha=0.7)
 
 
         # Convex hull for each dataset
-        points = np.column_stack((accuracy, fairness))
+        points = np.column_stack((performance, unfairness))
         hull = ConvexHull(points)
         for simplex in hull.simplices:
             plt.plot(points[simplex, 0], points[simplex, 1], color=hull_colors[label],
@@ -93,8 +93,8 @@ def plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type):
         plt.fill(points[hull.vertices, 0], points[hull.vertices, 1], color=hull_colors[label], alpha=0.2)  # Hull fill
 
     hull_metrics = {}  # To store hull measurements for each dataset
-    for label, (accuracy, fairness) in data.items():
-        points = np.column_stack((accuracy, fairness))
+    for label, (performance, unfairness) in data.items():
+        points = np.column_stack((performance, unfairness))
         hull = ConvexHull(points)
 
         # Calculate height, width, and area of the hull
@@ -117,9 +117,9 @@ def plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type):
         print(f"  Width: {metrics['width']}")
         print(f"  Area: {metrics['area']}\n")
 
-    plt.xlabel(f'Performance (Mean {accuracy_type})')
-    plt.ylabel(f'Fairness ({metric_type})')
-    plt.title(f'Fairness vs. Performance for {location_name}')
+    plt.xlabel(f'Performance (Mean {performance_type})')
+    plt.ylabel(f'Unfairness ({metric_type})')
+    plt.title(f'Unfairness vs. Performance for {location_name}')
     plt.ylim(plt.ylim())
     plt.xlim(plt.xlim())
 
@@ -151,7 +151,7 @@ def plot_fairness_vs_accuracy(location_name, accuracy_type, metric_type):
 
     plt.grid(True)
 
-    plt.savefig(f"../evaluation/{location_name}_{accuracy_type}_{metric_type}_plot.png", bbox_inches='tight')
+    plt.savefig(f"../evaluation/{location_name}_{performance_type}_{metric_type}_plot.png", bbox_inches='tight')
 
     plt.show()
 

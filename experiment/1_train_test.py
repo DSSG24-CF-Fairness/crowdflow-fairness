@@ -8,7 +8,7 @@ import geopandas as gpd
 sys.path.append(os.path.abspath('../preprocessing'))
 from train_test_processing import *
 
-folder_name = 'WA_NEW'
+folder_name = 'WA'
 
 geojson_path = f"../data/{folder_name}/boundary.geojson"
 flow_df = pd.read_csv(f"../data/{folder_name}/flow.csv")

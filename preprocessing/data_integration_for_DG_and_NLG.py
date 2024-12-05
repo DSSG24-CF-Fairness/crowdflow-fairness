@@ -11,16 +11,12 @@ import pickle
 import shutil
 
 def run_data_integration_form_DG_and_NLG(folder_name):
-    for dg_nlg_data_folder_id in range(21):
+    for dg_nlg_data_folder_id in range(25):
 
         if folder_name == "NY":
             dg_nlg_data_folder_name = "new_york" + str(dg_nlg_data_folder_id)
-        elif folder_name == "NY_NEW":
-            dg_nlg_data_folder_name = "new_york_new" + str(dg_nlg_data_folder_id)
         elif folder_name == "WA":
             dg_nlg_data_folder_name = "washington" + str(dg_nlg_data_folder_id)
-        elif folder_name == "WA_NEW":
-            dg_nlg_data_folder_name = "washington_new" + str(dg_nlg_data_folder_id)
         else:
             raise ValueError("folder_name is not valid")
 
@@ -377,16 +373,17 @@ def run_data_integration_form_DG_and_NLG(folder_name):
         shutil.copy(os.path.join(dg_nlg_data_root_folder_path, "processed_DG", "train_tiles.csv"),
                     os.path.join(dg_nlg_data_root_folder_path, "processed_NLG", "train_tiles.csv"))
 
-
-if __name__ == '__main__':
-    datasets = ["NY_NEW", "WA_NEW"]
-    # Create a pool of processes, one for each dataset
-    processes = []
-    for dataset in datasets:
-        p = multiprocessing.Process(target=run_data_integration_form_DG_and_NLG, args=(dataset,))
-        processes.append(p)
-        p.start()  # Start each process
-
-    # Wait for all processes to complete
-    for p in processes:
-        p.join()
+#
+# if __name__ == '__main__':
+#
+#     datasets = ["NY", "WA"]
+#     # Create a pool of processes, one for each dataset
+#     processes = []
+#     for dataset in datasets:
+#         p = multiprocessing.Process(target = run_data_integration_form_DG_and_NLG, args=(dataset,))
+#         processes.append(p)
+#         p.start()  # Start each process
+#
+#     # Wait for all processes to complete
+#     for p in processes:
+#         p.join()

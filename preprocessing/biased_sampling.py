@@ -1,8 +1,9 @@
 import random
-
 import pandas as pd
 import numpy as np
 import os
+
+
 
 def merge_data(features_df, demographics_df, flow_df, demographic_column_name='svi'):
     """
@@ -44,20 +45,19 @@ def merge_data(features_df, demographics_df, flow_df, demographic_column_name='s
     return final_df
 
 
-
-def calculate_biased_flow(features_df, 
-                          demographics_df, 
+def calculate_biased_flow(features_df,
+                          demographics_df,
                           flow_df,
                           folder_name,
                           demographic_column_name,
-                          method = 1,
-                          order = 'ascending',
-                          sampling = True,
-                          bias_factor = 0.5,
-                          random_seed = 1
+                          method=1,
+                          order='ascending',
+                          steepness_factor=5,
+                          sampling=True,
+                          random_seed=1
                           ):
     """
-    Adjusts flow data to account for demographic biases.
+    Adjusts flow data to account for demographic biases using a sigmoid-based adjustment factor.
 
     Parameters:
     - features_df (pd.DataFrame): DataFrame containing columns 'total_population' and 'geoid'.
@@ -66,14 +66,10 @@ def calculate_biased_flow(features_df,
     - demographic_column_name (str): The demographic column to consider from the demographics DataFrame. Default is 'svi'.
     - method (int): Specifies how bias is calculated; 1 for delta between origin and destination, 2 for destination only. Default is 1.
     - order (str): Sort order for demographic values, either 'ascending' or 'descending'. Default is 'ascending'.
-    - sampling (bool): If True, applies probabilistic sampling; if False, applies deterministic adjustment. Default is False.
-    - bias_factor (float): Factor to adjust the degree of bias in flow calculations. Default is 0.5.
+    - steepness (float): Steepness factor to adjust the curve's steepness. Default is 5.
 
     Returns:
     - None. Saves the adjusted flow DataFrame to a specified file path.
-
-    Notes:
-    - The function first merges features, demographics, and flow data, then adjusts flow values based on specified demographic biases. The results are saved to a CSV file.
     """
 
     # Call the merge_data function to merge all required data
@@ -92,44 +88,57 @@ def calculate_biased_flow(features_df,
     grouped = result_df.groupby('origin')
     biased_flows = []
 
+    # Sigmoid function parameters
+    x = np.linspace(0.01, 0.99, 500)  # x from 0 to 1
+    sigmoid_values = 2 / (1 + np.exp(-steepness_factor * (x - 0.5)))
+
     for name, group in grouped:
         group = group.copy()
         total_outflow = group['flow'].sum()
-        
+
         # Sort based on the demographic value in chosen order
         group = group.sort_values(by=bias_column, ascending=(order == 'ascending'))
-        
+
         # Calculate cumulative population and percentiles
         group['cumulative'] = group['population_d'].cumsum() - 0.5 * group['population_d']
         group['percentile'] = group['cumulative'] / group['population_d'].sum()
 
-        # Calculate adjusted flows
-        group['adjustment_factor'] = group['flow']*(group['percentile'] + bias_factor)
-        group['adjustment_factor'] = group['adjustment_factor']/ group['adjustment_factor'].sum()
-
-        if sampling is False:
-            group['adjusted_flows'] = group['adjustment_factor'] * total_outflow
+        # Map percentiles to sigmoid values for the adjustment factor
+        if order == 'ascending':
+            group['adjustment_factor'] = np.interp(group['percentile'], x, sigmoid_values)
         else:
+            group['adjustment_factor'] = np.interp(1 - group['percentile'], x, sigmoid_values)
+
+
+        group['new_flows'] = group['adjustment_factor'] * group['flow']
+        total_new_flows = group['new_flows'].sum()
+        group['weight'] = group['new_flows'] / total_new_flows
+
+        if sampling is True:
             np.random.seed(random_seed)
             random.seed(random_seed)
-            sampled_destinations = np.random.choice(group['destination'], size=int(total_outflow), p=group['adjustment_factor'], replace=True)
+            sampled_destinations = np.random.choice(group['destination'], size=int(total_outflow), p=group['weight'], replace=True)
             group['adjusted_flows'] = pd.Series(sampled_destinations).value_counts().reindex(group['destination']).fillna(0).values
+        else:
+            group['adjusted_flows'] = group['adjusted_flows'] = group['weight'] * total_outflow
 
         biased_flows.append(group)
 
     print(f'Random seed: {random_seed}.')
 
-
     biased_flows_df = pd.concat(biased_flows)
     final_flows_df = biased_flows_df[['origin', 'destination', 'adjusted_flows']].copy()
-    final_flows_df.rename(columns={'adjusted_flows':'flow'}, inplace= True)
+    final_flows_df.rename(columns={'adjusted_flows': 'flow'}, inplace=True)
 
     # Drop rows with flow value of NaN and 0
     final_flows_df = final_flows_df[(final_flows_df['flow'].notna())]
     final_flows_df = final_flows_df.loc[final_flows_df['flow'] > 0]
 
     # Choose file name based on sampling
-    file_suffix = f'sampled_flow_{random_seed}' if sampling else f'biased_flow'
+    if sampling is True:
+        file_suffix = f'biased_flow_{random_seed}_steep_{steepness_factor}'
+    else:
+        file_suffix = f'biased_flow_no_sampling_steep_{steepness_factor}'
 
     # Construct the save path
     save_path = f'../processed_data/{folder_name}/train/{demographic_column_name}_{method}_{order}_{file_suffix}.csv'
