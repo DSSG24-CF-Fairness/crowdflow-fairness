@@ -14,7 +14,7 @@ common_args = [
     "--mode", "train"
 ]
 
-locations = ["washington"]
+locations = ["new_york", "washington"]
 model_types = ["DG", "NLG"]
 
 def run_command(dataset_name, model_type):

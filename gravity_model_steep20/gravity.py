@@ -81,7 +81,7 @@ def grav_Model(tessellation_train, tessellation_test,
     filename = os.path.basename(flow_data_train_location)
     prefix, suffix = filename.split('_', 1)
 
-    output_path = os.path.join('..', 'gravity_model', 'results', f'{folder_name}')
+    output_path = os.path.join('..', 'gravity_model_steep20', 'results', f'{folder_name}')
     os.makedirs(output_path, exist_ok=True)
 
     file_path = os.path.join(output_path, f'synthetic_{gravity_type}_{suffix}')

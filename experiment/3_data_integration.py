@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath('../preprocessing'))
 from data_integration_for_DG_and_NLG import *
 
 if __name__ == '__main__':
-    datasets = ["WA"]
+    datasets = ["NY"]
     # Create a pool of processes, one for each dataset
     processes = []
     for dataset in datasets:

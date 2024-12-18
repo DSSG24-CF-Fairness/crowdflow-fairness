@@ -2,7 +2,7 @@ import subprocess
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 python_path = r"C:\Users\kiki\AppData\Local\anaconda3\envs\pycharm_crowdflow_39\python.exe"
-script_path = r"C:\Users\kiki\Documents\GitHub\Python\crowdflow-fairness\deepgravity\main.py"
+script_path = r"C:\Users\kiki\Documents\GitHub\Python\crowdflow-fairness\deepgravity_steep20\main.py"
 
 common_args = [
     "--oa-id-column", "GEOID",
@@ -14,7 +14,7 @@ common_args = [
     "--mode", "train"
 ]
 
-locations = ["new_york", "washington"]
+locations = ["new_york"]
 model_types = ["DG", "NLG"]
 
 def run_command(dataset_name, model_type):

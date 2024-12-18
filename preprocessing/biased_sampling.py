@@ -104,10 +104,7 @@ def calculate_biased_flow(features_df,
         group['percentile'] = group['cumulative'] / group['population_d'].sum()
 
         # Map percentiles to sigmoid values for the adjustment factor
-        if order == 'ascending':
-            group['adjustment_factor'] = np.interp(group['percentile'], x, sigmoid_values)
-        else:
-            group['adjustment_factor'] = np.interp(1 - group['percentile'], x, sigmoid_values)
+        group['adjustment_factor'] = np.interp(group['percentile'], x, sigmoid_values)
 
 
         group['new_flows'] = group['adjustment_factor'] * group['flow']
@@ -120,7 +117,7 @@ def calculate_biased_flow(features_df,
             sampled_destinations = np.random.choice(group['destination'], size=int(total_outflow), p=group['weight'], replace=True)
             group['adjusted_flows'] = pd.Series(sampled_destinations).value_counts().reindex(group['destination']).fillna(0).values
         else:
-            group['adjusted_flows'] = group['adjusted_flows'] = group['weight'] * total_outflow
+            group['adjusted_flows'] = group['weight'] * total_outflow
 
         biased_flows.append(group)
 

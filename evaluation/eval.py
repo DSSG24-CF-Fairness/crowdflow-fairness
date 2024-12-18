@@ -12,12 +12,13 @@ class FlowEvaluator:
 
     """
 
-    def __init__(self, flows_path, generated_flows_path, demographics_path, model_type, folder_name):
+    def __init__(self, flows_path, generated_flows_path, demographics_path, model_type, folder_name, steepness_factor):
         self.flows_path = flows_path
         self.generated_flows_path = generated_flows_path
         self.demographics_path = demographics_path
         self.model_type = model_type
         self.folder_name = folder_name
+        self.steepness_factor = steepness_factor
         # Initialize the save path based on performance and variance metrics
         self.save_path = None
 
@@ -25,7 +26,7 @@ class FlowEvaluator:
         """
         Initializes the log file path and writes headers if the log file does not exist.
         """
-        self.save_path = f'../evaluation/{self.folder_name}_{self.model_type}/{performance_metric}/{variance_metric}/'
+        self.save_path = f'../evaluation/{self.steepness_factor}/{self.folder_name}_{self.model_type}/{performance_metric}/'
         # Ensure the directory exists
         os.makedirs(os.path.dirname(self.save_path), exist_ok=True)
         # Create log file with headers if it doesn't exist
@@ -218,8 +219,8 @@ class FlowEvaluator:
 
         performance_matrix_max = np.max(self.performance_matrix)
         self.performance_matrix_normalized = self.performance_matrix / performance_matrix_max
-        # heatmap = sns.heatmap(self.performance_matrix_normalized, annot=False, cmap='Blues', cbar=True, square=True, vmin=0, vmax=1)
-        heatmap = sns.heatmap(self.performance_matrix_normalized, annot=True, cmap='Blues', cbar=True, square=True, vmin=0, vmax=1)
+        heatmap = sns.heatmap(self.performance_matrix_normalized, annot=False, cmap='Blues', cbar=True, square=True, vmin=0, vmax=1)
+        # heatmap = sns.heatmap(self.performance_matrix_normalized, annot=True, cmap='Blues', cbar=True, square=True, vmin=0, vmax=1)
         plt.title(f'Heatmap of {performance_metric} by Demographic Buckets', fontsize=16)
         plt.xlabel('Origin Demographic Buckets', fontsize=14)
         plt.ylabel('Destination Demographic Buckets', fontsize=14)

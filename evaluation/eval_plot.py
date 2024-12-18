@@ -5,10 +5,10 @@ import numpy as np
 from scipy.spatial import ConvexHull
 import re
 
-def plot_unfairness_vs_performance(location_name, performance_type, metric_type):
-    results_G = pd.read_csv(f"../evaluation/{location_name}_G/{performance_type}/{metric_type}/{location_name}_G_log.csv")
-    results_DG = pd.read_csv(f"../evaluation/{location_name}_DG/{performance_type}/{metric_type}/{location_name}_DG_log.csv")
-    results_NLG = pd.read_csv(f"../evaluation/{location_name}_NLG/{performance_type}/{metric_type}/{location_name}_NLG_log.csv")
+def plot_unfairness_vs_performance(steepness_factor, location_name, performance_type, metric_type):
+    results_G = pd.read_csv(f"../evaluation/{steepness_factor}/{location_name}_G/{performance_type}/{location_name}_G_log.csv")
+    results_DG = pd.read_csv(f"../evaluation/{steepness_factor}/{location_name}_DG/{performance_type}/{location_name}_DG_log.csv")
+    results_NLG = pd.read_csv(f"../evaluation/{steepness_factor}/{location_name}_NLG/{performance_type}/{location_name}_NLG_log.csv")
 
     data = {
         f"{location_name}_G": (results_G['performance'], results_G['unfairness'], results_G['file_name']),
@@ -125,8 +125,8 @@ def plot_unfairness_vs_performance(location_name, performance_type, metric_type)
         all_points = np.column_stack((performance, unfairness))
         hull, points, _ = calculate_hull_metrics(all_points, "all", store_metrics=False)
         if hull:
-            for simplex in hull.simplices:
-                plt.plot(points[simplex, 0], points[simplex, 1], color=hull_colors[label])
+            # for simplex in hull.simplices:
+            #     plt.plot(points[simplex, 0], points[simplex, 1], color=hull_colors[label])
             plt.fill(points[hull.vertices, 0], points[hull.vertices, 1], color=hull_colors[label], alpha=0.2)
 
     # Display hull metrics for each model and shape
@@ -135,6 +135,50 @@ def plot_unfairness_vs_performance(location_name, performance_type, metric_type)
         print(f"  Height: {metrics['height']}")
         print(f"  Width: {metrics['width']}")
         print(f"  Area: {metrics['area']}\n")
+
+
+    def sep_description(description):
+        res = list(description.split("_"))
+        if res[0] == "NY":
+            res[0] = "New York"
+        elif res[0] == "WA":
+            res[0] = "Washington"
+        if res[1] == "G":
+            res[1] = "Gravity"
+        elif res[1] == "DG":
+            res[1] = "Deep Gravity"
+        elif res[1] == "NLG":
+            res[1] = "Non-Linear Gravity"
+        if res[2] == "all":
+            res[2] = "All (Mean)"
+        return res
+
+
+    dataset_locs = []
+    model_types = []
+    descriptions = []
+
+    for key in hull_metrics:
+        dataset_loc, model_type, description = sep_description(key)
+        dataset_locs.append(dataset_loc)
+        model_types.append(model_type)
+        descriptions.append(description)
+
+    df = pd.DataFrame({
+        "Dataset Location": dataset_locs,
+        "Model Type": model_types,
+        "Description": descriptions,
+        "Fairness Sensitivity (Height)": [metrics["height"] for metrics in hull_metrics.values()],
+        "Performance Sensitivity (Width)": [metrics["width"] for metrics in hull_metrics.values()],
+        "Robustness (Area)": [metrics["area"] for metrics in hull_metrics.values()]
+    })
+
+    pd.set_option("display.max_rows", None)  # Shows all rows
+    pd.set_option("display.max_columns", None)  # Shows all columns
+    pd.set_option("display.width", None)  # Adjusts width for better formatting
+    print(df)
+    df.to_csv(f"../evaluation/{steepness_factor}/{location_name}_{performance_type}_{metric_type}_{steepness_factor}.csv", index = False)
+
 
 
 
@@ -164,12 +208,12 @@ def plot_unfairness_vs_performance(location_name, performance_type, metric_type)
     legend_handles = hull_handles + point_handles + line_handles
     plt.legend(handles=legend_handles, title="Legend", loc='upper left', bbox_to_anchor=(1, 1), borderpad=1.5, handlelength=2)
 
-    plt.xlabel(f'Performance (Mean {performance_type})')
-    plt.ylabel(f'Unfairness ({metric_type})')
-    plt.title(f'Unfairness vs. Performance for {location_name}')
+    plt.xlabel(f'Performance (Mean {performance_type})', fontsize=14, fontweight='bold')
+    plt.ylabel(f'Unfairness ({metric_type})', fontsize=14, fontweight='bold')
+    plt.title(f'Unfairness vs. Performance for {location_name}', fontsize=14, fontweight='bold')
     plt.grid(True)
 
-    plt.savefig(f"../evaluation/{location_name}_{performance_type}_{metric_type}_plot.png", bbox_inches='tight')
+    plt.savefig(f"../evaluation/{steepness_factor}/{location_name}_{performance_type}_{metric_type}_{steepness_factor}_plot.png", bbox_inches='tight')
 
     plt.show()
 
