@@ -221,9 +221,9 @@ class FlowEvaluator:
         self.performance_matrix_normalized = self.performance_matrix / performance_matrix_max
         heatmap = sns.heatmap(self.performance_matrix_normalized, annot=False, cmap='Blues', cbar=True, square=True, vmin=0, vmax=1)
         # heatmap = sns.heatmap(self.performance_matrix_normalized, annot=True, cmap='Blues', cbar=True, square=True, vmin=0, vmax=1)
-        plt.title(f'Heatmap of {performance_metric} by Demographic Buckets', fontsize=16)
-        plt.xlabel('Origin Demographic Buckets', fontsize=14)
-        plt.ylabel('Destination Demographic Buckets', fontsize=14)
+        plt.title(f'Heatmap of {performance_metric} by Demographic Buckets', fontsize=16, fontweight='bold')
+        plt.xlabel('Origin Demographic Buckets', fontsize=14, fontweight='bold')
+        plt.ylabel('Destination Demographic Buckets', fontsize=14, fontweight='bold')
 
         # Customize the color legend
         cbar = heatmap.collections[0].colorbar
