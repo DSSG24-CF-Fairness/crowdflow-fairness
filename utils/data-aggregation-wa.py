@@ -84,5 +84,5 @@ def process_county_files(directory, tracts):
 
 # Running the function
 final_data = process_county_files(directory, tracts)
-final_data.to_csv("/Users/apoorvasheera/Documents/DSSG/Crowd Flow/osm/aggregated-data-wa.csv", index=False)
+final_data.to_csv("aggregated-data-wa.csv", index=False)
 print("Data aggregation complete and saved.")

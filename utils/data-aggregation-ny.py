@@ -10,7 +10,7 @@ tracts = gpd.read_file("tl_2020_36_tract/tl_2020_36_tract.shp")
 tracts = tracts.to_crs(epsg=4326)
 
 # Directory containing your CSV files
-directory = "/Users/apoorvasheera/Documents/DSSG/Crowd Flow/osm/county_results_ny"
+directory = "county_results_ny"
 
 # Function to process each county file
 def process_county_files(directory, tracts):
@@ -84,5 +84,5 @@ def process_county_files(directory, tracts):
 
 # Running the function
 final_data = process_county_files(directory, tracts)
-final_data.to_csv("/Users/apoorvasheera/Documents/DSSG/Crowd Flow/osm/aggregated-data-ny.csv", index=False)
+final_data.to_csv("aggregated-data-ny.csv", index=False)
 print("Data aggregation complete and saved.")
