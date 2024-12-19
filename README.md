@@ -105,6 +105,6 @@ Each folder contains datasets sampled with different fairness sampling strategie
 ---
 
 ### Final Outputs:
-The final results and evaluation plots will help benchmark the fairness of the generative crowd-flow models. Use the generated results to analyze disparities and evaluate model effectiveness under different sampling strategies.
+The final results and evaluation plots will be saved under `evaluation/steep{X}` folder and help benchmark the fairness of the generative crowd-flow models. Use the generated results to analyze disparities and evaluate model effectiveness under different sampling strategies.
 
 
