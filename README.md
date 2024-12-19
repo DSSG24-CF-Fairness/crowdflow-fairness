@@ -1,5 +1,5 @@
 # crowdflow-fairness
-#### This repository contains the code and instructions for implementing the experiments described in the research paper *Planning for Equity: A Framework for Measuring and Benchmarking Fairness of Generative Crowd-Flow Models*.
+#### This repository contains the code and instructions for implementing the experiments described in the research paper *A Framework for Measuring and Benchmarking Fairness of Generative Crowd-Flow Models*.
 
 ---
 # Install 
