@@ -1,5 +1,6 @@
 # crowdflow-fairness
-#### This repository contains the code and instructions for implementing the experiments described in the research paper *A Framework for Measuring and Benchmarking Fairness of Generative Crowd-Flow Models*.
+#### This repository contains the code and instructions for implementing the experiments described in the journal article *A Framework for Measuring and Benchmarking Fairness of Generative Crowd-Flow Models*, published in _ACM Journal on Computing and Sustainable Societies_.
+Read it [here](https://dl.acm.org/doi/full/10.1145/3724409).
 
 ---
 # Install 
